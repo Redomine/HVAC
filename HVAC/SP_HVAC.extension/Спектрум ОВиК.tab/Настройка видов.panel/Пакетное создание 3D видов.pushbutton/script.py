@@ -279,21 +279,22 @@ def cheklist(input_list):
 #для вентиляции отфильтруем приточно-вытяжные установки, чтобы назначить их фильтр
 
 
-def create_filter_view(element, systems, master_view, filter_name):
+def create_filter_view(project_todo, element, systems, master_view, filter_name):
     rules = []
     for rule in systems:
         rules.append(ParameterFilterRuleFactory.CreateNotEqualsRule(ElementId(BuiltInParameter.RBS_SYSTEM_NAME_PARAM), rule, rule))
-    filter_name = '_для скрипта ' + first_mark
+        filter_name = '_скрипт' + filter_name
     if (ParameterFilterElement.IsNameUnique(doc, filter_name)):
         filter = ParameterFilterElement.Create(doc, filter_name, categories, rules)
         copy_view_eid = master_view.Duplicate(ViewDuplicateOption.WithDetailing)
         copy_view = doc.GetElement(copy_view_eid)
-        copy_view.Name = '_скрипт' + filter_name
+        copy_view.Name = filter_name
         copy_view.AddFilter(filter.Id)
         copy_view.SetFilterVisibility(filter.Id,False)
         rules = []
     else:
         print 'Для системы', element, 'уже создан фильтр. Удалите его или проверьте правильность'
+
 
     
 
@@ -372,18 +373,31 @@ secondary_systems = [] #этот список наполняется втори�
 for element in checked_systems:
     first_mark = element
     if first_mark in secondary_systems:
-       continue 
+       continue
     equipment_systems = [first_mark]
     for equipment in Equipment:
         if equipment[1] == None:
             continue
         if first_mark in equipment[1].split(','):
-            equipment_systems = equipment[1].split(',')
+            system_to_confirm = equipment[1].split(',')
+            
+            for confirm in system:
+                try:
+                    if confirm.Name in system_to_confirm:
+                        if confirm.Name != first_mark:
+                            equipment_systems.append(confirm.Name)
+                except Exception:
+                    pass
+            
             for system in equipment_systems:
                 secondary_systems.append(system)
-            equipment_systems.append(equipment[1])
-            
-    create_filter_view(element, equipment_systems, master_view, equipment_systems[-1])
+            if project_todo == 'Вентиляция':
+                equipment_systems.append(equipment[1])
+
+    filter_name = ''
+    for name in equipment_systems:
+        filter_name = filter_name + name
+    create_filter_view(project_todo, element, equipment_systems, master_view, filter_name)
 t.Commit()
 
     
