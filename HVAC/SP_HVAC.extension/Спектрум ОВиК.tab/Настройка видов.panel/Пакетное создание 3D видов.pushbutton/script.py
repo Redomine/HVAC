@@ -282,7 +282,10 @@ def cheklist(input_list):
 def create_filter_view(project_todo, element, systems, master_view, filter_name):
     rules = []
     for rule in systems:
-        rules.append(ParameterFilterRuleFactory.CreateNotEqualsRule(ElementId(BuiltInParameter.RBS_SYSTEM_NAME_PARAM), rule, rule))
+        if project_todo == 'Вентиляция':
+            rules.append(ParameterFilterRuleFactory.CreateNotEqualsRule(ElementId(BuiltInParameter.RBS_SYSTEM_NAME_PARAM), rule, rule))
+        else:
+            rules.append(ParameterFilterRuleFactory.CreateNotContainsRule(ElementId(BuiltInParameter.RBS_SYSTEM_NAME_PARAM), rule, rule))
         filter_name = '_скрипт' + filter_name
     if (ParameterFilterElement.IsNameUnique(doc, filter_name)):
         filter = ParameterFilterElement.Create(doc, filter_name, categories, rules)
@@ -372,6 +375,7 @@ secondary_systems = [] #этот список наполняется втори�
 
 for element in checked_systems:
     first_mark = element
+    
     if first_mark in secondary_systems:
        continue
     equipment_systems = [first_mark]
@@ -380,6 +384,7 @@ for element in checked_systems:
             continue
         if first_mark in equipment[1].split(','):
             system_to_confirm = equipment[1].split(',')
+
             
             for confirm in system:
                 try:
@@ -388,11 +393,11 @@ for element in checked_systems:
                             equipment_systems.append(confirm.Name)
                 except Exception:
                     pass
-            
-            for system in equipment_systems:
-                secondary_systems.append(system)
+            for equipment_system in equipment_systems:
+                secondary_systems.append(equipment_system)
             if project_todo == 'Вентиляция':
                 equipment_systems.append(equipment[1])
+            break
 
     filter_name = ''
     for name in equipment_systems:
