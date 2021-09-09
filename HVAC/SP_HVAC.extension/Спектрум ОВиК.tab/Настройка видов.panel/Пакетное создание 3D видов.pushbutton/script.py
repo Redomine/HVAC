@@ -288,7 +288,7 @@ def create_filter_view(project_todo, element, systems, master_view, filter_name)
             rules.append(ParameterFilterRuleFactory.CreateNotEqualsRule(ElementId(BuiltInParameter.RBS_SYSTEM_NAME_PARAM), rule, rule))
         else:
             rules.append(ParameterFilterRuleFactory.CreateNotContainsRule(ElementId(BuiltInParameter.RBS_SYSTEM_NAME_PARAM), rule, rule))
-        filter_name = '_скрипт' + filter_name
+    filter_name = '_скрипт' + filter_name
     if (ParameterFilterElement.IsNameUnique(doc, filter_name)):
         try:
             filter = ParameterFilterElement.Create(doc, filter_name, categories, rules)
