@@ -30,6 +30,7 @@ from System.Windows.Forms import *
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 
+
 class MainForm_a(Form):
     
     def __init__(self, levels):
@@ -281,6 +282,7 @@ def cheklist(input_list):
 
 def create_filter_view(project_todo, element, systems, master_view, filter_name):
     rules = []
+    
     for rule in systems:
         if project_todo == 'Вентиляция':
             rules.append(ParameterFilterRuleFactory.CreateNotEqualsRule(ElementId(BuiltInParameter.RBS_SYSTEM_NAME_PARAM), rule, rule))
@@ -288,7 +290,16 @@ def create_filter_view(project_todo, element, systems, master_view, filter_name)
             rules.append(ParameterFilterRuleFactory.CreateNotContainsRule(ElementId(BuiltInParameter.RBS_SYSTEM_NAME_PARAM), rule, rule))
         filter_name = '_скрипт' + filter_name
     if (ParameterFilterElement.IsNameUnique(doc, filter_name)):
-        filter = ParameterFilterElement.Create(doc, filter_name, categories, rules)
+        try:
+            filter = ParameterFilterElement.Create(doc, filter_name, categories, rules)
+        except Exception:
+            filter = ParameterFilterElement.Create(doc, filter_name, categories)
+            elemFilters = []
+            for rule in rules:
+                elemParamFilter = ElementParameterFilter(rule)
+                elemFilters.append(elemParamFilter)
+            elemFilter = LogicalAndFilter(elemFilters)
+            filter.SetElementFilter(elemFilter)
         copy_view_eid = master_view.Duplicate(ViewDuplicateOption.WithDetailing)
         copy_view = doc.GetElement(copy_view_eid)
         copy_view.Name = filter_name
