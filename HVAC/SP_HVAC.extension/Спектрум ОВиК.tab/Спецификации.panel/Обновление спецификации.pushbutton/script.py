@@ -55,6 +55,8 @@ t = Transaction(doc, 'Обновление общей спеки')
 
 t.Start()
 
+
+
 def common_param(element):
     Size = 0
     if element.Name == 'СП_Медная':
@@ -73,12 +75,26 @@ def common_param(element):
     if element.LookupParameter('ИОС_Размер'):
         Spec_Size = element.LookupParameter('ИОС_Размер')
         Spec_Size.Set(Size)
+        
+    try:
+        if element.LookupParameter('ИОС_Наименование'):
+            if element.LookupParameter('О_Наименование') != None:
+                Spec_Name = element.LookupParameter('ИОС_Наименование')
+                Old_Name = element.LookupParameter('О_Наименование').AsString()
+                New_Name = Old_Name + ' ' + Size
+
+                Spec_Name.Set(New_Name)
+    except Exception:
+        pass
 
         
 
 #этот блок для элементов с длиной или площадью(учесть что в единицах измерения проекта должны стоять м/м2, а то в спеку уйдут миллиметры
-def add_spec_param(collection, param, position): 
+def add_spec_param(collection, param, position):
+    k1 = 1.15
+    k2 = 1.20
     for element in collection:
+        
         try:
                 if element.LookupParameter('ИОС_Позиция в спецификации'):
                     Pos = element.LookupParameter('ИОС_Позиция в спецификации')
@@ -88,11 +104,14 @@ def add_spec_param(collection, param, position):
                     Length = Length.split(' ')
                     Length = Length[0] 
                 if element.LookupParameter('ИОС_Количество'):
+                    
                     if Length == None: continue
                     Spec_Length = element.LookupParameter('ИОС_Количество')
                     if param != 'Площадь':
-                        target = float(Length)
-                    else: target = float(Length)
+                        target = (float(Length)/1000)*k1
+  
+                        
+                    else: target = float(Length)*k2
                     Spec_Length.Set(target)
                 common_param(element)
         except Exception:
