@@ -13,6 +13,7 @@ clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neut
 import sys
 import System
 import WriteLog
+
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import TaskDialog
 from Autodesk.Revit.UI.Selection import ObjectType
@@ -27,7 +28,7 @@ import System.Drawing
 import System.Windows.Forms
 from System.Drawing import *
 from System.Windows.Forms import *
-    
+from System import Guid
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 
@@ -56,36 +57,54 @@ t = Transaction(doc, 'Обновление общей спеки')
 t.Start()
 
 
+def make_new_name(collection):
+    SelectedLink  = __revit__.ActiveUIDocument.Document
+    for element in collection:
+        if element.LookupParameter('ИОС_Размер'):
+            Size = element.LookupParameter('ИОС_Размер').AsString()
+        ElemTypeId = element.GetTypeId()
+        ElemType = SelectedLink.GetElement(ElemTypeId)
+        O_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
 
+
+    
+    
+    
 def common_param(element):
+    SelectedLink  = __revit__.ActiveUIDocument.Document
     Size = 0
-    if element.Name == 'СП_Медная':
-        if element.LookupParameter('Внешний диаметр'):
-            Size = element.LookupParameter('Внешний диаметр').AsValueString()
-            print Size
+#    if element.Name == 'СП_Медная':
+#        pass
+#         if element.LookupParameter('Внешний диаметр'):
+#             Size = element.LookupParameter('Внешний диаметр').AsValueString()
         
-    elif element.LookupParameter('Диаметр'):
+    if element.LookupParameter('Диаметр'):
         Size = element.LookupParameter('Диаметр').AsValueString()
         if Size == None:
             if element.LookupParameter('Размер'):
                 Size = element.LookupParameter('Размер').AsString()
     elif element.LookupParameter('Размер'):
         Size = element.LookupParameter('Размер').AsString()
-
     if element.LookupParameter('ИОС_Размер'):
         Spec_Size = element.LookupParameter('ИОС_Размер')
         Spec_Size.Set(Size)
-        
+    
     try:
-        if element.LookupParameter('ИОС_Наименование'):
-            if element.LookupParameter('О_Наименование') != None:
-                Spec_Name = element.LookupParameter('ИОС_Наименование')
-                Old_Name = element.LookupParameter('О_Наименование').AsString()
-                New_Name = Old_Name + ' ' + Size
-
-                Spec_Name.Set(New_Name)
+        Spec_Name = element.LookupParameter('ИОС_Наименование')
+        if element.LookupParameter('О_Наименование'):
+            Old_Name = element.LookupParameter('О_Наименование').AsString()
+            New_Name = Old_Name + ' ' + Size
+            
+        else:
+            ElemTypeId = element.GetTypeId()
+            ElemType = SelectedLink.GetElement(ElemTypeId)
+            O_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
+            New_Name = O_Name + ' ' + Size
+        Spec_Name.Set(New_Name)
     except Exception:
-        pass
+        pass    
+        
+
 
         
 
