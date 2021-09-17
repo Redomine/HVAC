@@ -57,21 +57,39 @@ t = Transaction(doc, 'Обновление общей спеки')
 t.Start()
 
 
-def make_new_name(collection):
+def make_new_name(collection, status):
     SelectedLink  = __revit__.ActiveUIDocument.Document
     for element in collection:
-        if element.LookupParameter('ИОС_Размер'):
-            Size = element.LookupParameter('ИОС_Размер').AsString()
-        ElemTypeId = element.GetTypeId()
-        ElemType = SelectedLink.GetElement(ElemTypeId)
-        O_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
+        try:
+            if status != '+':       
+                Spec_Name = element.LookupParameter('ИОС_Наименование')
+                if element.LookupParameter('О_Наименование'):
+                    O_Name = element.LookupParameter('О_Наименование').AsString()
+                else:
+                    ElemTypeId = element.GetTypeId()
+                    ElemType = SelectedLink.GetElement(ElemTypeId)
+                    O_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
+                New_Name = O_Name  
+                Spec_Name.Set(New_Name)
+            else:
+                if element.LookupParameter('ИОС_Размер'):
+                    Size = element.LookupParameter('ИОС_Размер').AsString()
+                Spec_Name = element.LookupParameter('ИОС_Наименование')
+                if element.LookupParameter('О_Наименование'):
+                    Old_Name = element.LookupParameter('О_Наименование').AsString()
+                    New_Name = Old_Name + ' ' + Size  
+                else:
+                    ElemTypeId = element.GetTypeId()
+                    ElemType = SelectedLink.GetElement(ElemTypeId)
+                    O_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
+                    New_Name = O_Name + ' ' + Size
+                Spec_Name.Set(New_Name)
+        except Exception:
+            pass    
 
-
-    
     
     
 def common_param(element):
-    SelectedLink  = __revit__.ActiveUIDocument.Document
     Size = 0
 #    if element.Name == 'СП_Медная':
 #        pass
@@ -89,20 +107,7 @@ def common_param(element):
         Spec_Size = element.LookupParameter('ИОС_Размер')
         Spec_Size.Set(Size)
     
-    try:
-        Spec_Name = element.LookupParameter('ИОС_Наименование')
-        if element.LookupParameter('О_Наименование'):
-            Old_Name = element.LookupParameter('О_Наименование').AsString()
-            New_Name = Old_Name + ' ' + Size
-            
-        else:
-            ElemTypeId = element.GetTypeId()
-            ElemType = SelectedLink.GetElement(ElemTypeId)
-            O_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
-            New_Name = O_Name + ' ' + Size
-        Spec_Name.Set(New_Name)
-    except Exception:
-        pass    
+
         
 
 
@@ -168,7 +173,21 @@ add_spec_param(colPipeInsulations, 'Длина', '6')
 add_spec_param(colInsulations, 'Площадь', '6')
 
 
-    
+
+make_new_name(colEquipment, '-')
+make_new_name(colAccessory, '-')
+make_new_name(colTerminals, '-')
+make_new_name(colCurves, '+')
+make_new_name(colFlexCurves, '+')
+make_new_name(colFittings, '+')
+make_new_name(colPipeCurves, '+')
+make_new_name(colFlexPipeCurves, '+')
+make_new_name(colPipeAccessory, '-')
+make_new_name(colPipeFittings, '+')
+make_new_name(colPipeInsulations, '-')
+make_new_name(colInsulations, '-')
+
+
 t.Commit()
 
 #WriteLog.SetLogFile("Распределение по рабочим наборам", doc)
