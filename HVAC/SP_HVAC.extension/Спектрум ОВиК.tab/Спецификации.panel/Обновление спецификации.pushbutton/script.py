@@ -159,18 +159,18 @@ def add_item_spec_param(collection, position):
         except Exception:
             continue
         
-add_item_spec_param(colEquipment, '1')
-add_item_spec_param(colAccessory, '2')
-add_item_spec_param(colTerminals, '3')
-add_spec_param(colCurves, 'Длина', '4')
-add_spec_param(colFlexCurves, 'Длина', '4')
-add_item_spec_param(colFittings, '5')
-add_spec_param(colPipeCurves, 'Длина', '4')
-add_spec_param(colFlexPipeCurves, 'Длина', '4')
-add_item_spec_param(colPipeAccessory, '2')
-add_item_spec_param(colPipeFittings, '5')
-add_spec_param(colPipeInsulations, 'Длина', '6')
-add_spec_param(colInsulations, 'Площадь', '6')
+add_item_spec_param(colEquipment, '1.Оборудование')
+add_item_spec_param(colAccessory, '2. Арматура')
+add_item_spec_param(colTerminals, '3. Воздухораспределители')
+add_spec_param(colCurves, 'Длина', '4. Воздуховоды')
+add_spec_param(colFlexCurves, 'Длина', '4. Гибкие воздуховоды')
+add_item_spec_param(colFittings, '5. Фасонные детали воздуховодов')
+add_spec_param(colPipeCurves, 'Длина', '4. Трубопроводы')
+add_spec_param(colFlexPipeCurves, 'Длина', '4. Гибкие трубопроводы')
+add_item_spec_param(colPipeAccessory, '2. Трубопроводная арматура')
+add_item_spec_param(colPipeFittings, '5. Фасонные детали трубопроводов')
+add_spec_param(colPipeInsulations, 'Длина', '6. Материалы трубопроводной изоляции')
+add_spec_param(colInsulations, 'Площадь', '6. Материалы изоляции воздуховодов')
 
 
 
