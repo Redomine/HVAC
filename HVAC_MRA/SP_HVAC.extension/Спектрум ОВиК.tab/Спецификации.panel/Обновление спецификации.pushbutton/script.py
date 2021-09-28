@@ -102,24 +102,33 @@ def make_new_name(collection, status, mark):
     
     
 def common_param(element):
-    Size = 0
+    Size = ''
     if element.Name == 'СП_Медная':
         if element.LookupParameter('Внешний диаметр'):
-            Size = element.LookupParameter('Внешний диаметр').AsValueString()
-        
-    if element.LookupParameter('Диаметр'):
-        Size = element.LookupParameter('Диаметр').AsValueString()
-        if Size == None:
-            if element.LookupParameter('Размер'):
-                Size = element.LookupParameter('Размер').AsString()
-    elif element.LookupParameter('Размер'):
-        Size = element.LookupParameter('Размер').AsString()
-    elif element.LookupParameter('Размер трубы'):
-        Size = element.LookupParameter('Размер трубы').AsString()        
-    
-    if element.LookupParameter('ИОС_Размер'):
+            Size = "Ø" + element.LookupParameter('Внешний диаметр').AsValueString()
+            Spec_Size = element.LookupParameter('ИОС_Размер')
+            Spec_Size.Set(Size)
+           
+    elif element.LookupParameter('Внешний диаметр'):
+        outer_size = element.LookupParameter('Внешний диаметр').AsValueString()
+        interior_size = element.LookupParameter('Внутренний диаметр').AsValueString()
+        thickness = (float(outer_size) - float(interior_size))/2
+        Size = "Ø" + outer_size + "x" + str(thickness)
         Spec_Size = element.LookupParameter('ИОС_Размер')
         Spec_Size.Set(Size)
+    elif element.LookupParameter('Размер'):
+        Size = element.LookupParameter('Размер').AsString()
+        Spec_Size = element.LookupParameter('ИОС_Размер')
+        Spec_Size.Set(Size)
+        
+    elif element.LookupParameter('Размер трубы'):
+        Size = element.LookupParameter('Размер трубы').AsString()
+        Spec_Size = element.LookupParameter('ИОС_Размер')
+        Spec_Size.Set(Size)
+    
+    #if element.LookupParameter('ИОС_Размер'):
+    #    Spec_Size = element.LookupParameter('ИОС_Размер')
+    #    Spec_Size.Set(Size)
     
 
         
