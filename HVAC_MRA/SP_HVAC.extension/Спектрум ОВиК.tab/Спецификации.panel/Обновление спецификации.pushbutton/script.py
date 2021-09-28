@@ -57,7 +57,7 @@ t = Transaction(doc, 'Обновление общей спеки')
 t.Start()
 
 
-def make_new_name(collection, status):
+def make_new_name(collection, status, mark):
     SelectedLink  = __revit__.ActiveUIDocument.Document
     for element in collection:
         try:
@@ -84,6 +84,18 @@ def make_new_name(collection, status):
                     O_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
                     New_Name = O_Name + ' ' + Size
                 Spec_Name.Set(New_Name)
+                
+            if element.LookupParameter('О_Марка'):
+                O_Mark = element.LookupParameter('О_Марка').AsString()
+            else:
+                ElemTypeId = element.GetTypeId()
+                ElemType = SelectedLink.GetElement(ElemTypeId)
+                O_Mark = ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString()
+            
+            if O_Mark != None and O_Mark != "" and mark == "+":
+                Mark_Name = element.LookupParameter('ИОС_Наименование').AsString() + " " + "(" + O_Mark +")"
+                
+                Spec_Name.Set(Mark_Name)
         except Exception:
             pass    
 
@@ -91,10 +103,9 @@ def make_new_name(collection, status):
     
 def common_param(element):
     Size = 0
-#    if element.Name == 'СП_Медная':
-#        pass
-#         if element.LookupParameter('Внешний диаметр'):
-#             Size = element.LookupParameter('Внешний диаметр').AsValueString()
+    if element.Name == 'СП_Медная':
+        if element.LookupParameter('Внешний диаметр'):
+            Size = element.LookupParameter('Внешний диаметр').AsValueString()
         
     if element.LookupParameter('Диаметр'):
         Size = element.LookupParameter('Диаметр').AsValueString()
@@ -103,6 +114,9 @@ def common_param(element):
                 Size = element.LookupParameter('Размер').AsString()
     elif element.LookupParameter('Размер'):
         Size = element.LookupParameter('Размер').AsString()
+    elif element.LookupParameter('Размер трубы'):
+        Size = element.LookupParameter('Размер трубы').AsString()        
+    
     if element.LookupParameter('ИОС_Размер'):
         Spec_Size = element.LookupParameter('ИОС_Размер')
         Spec_Size.Set(Size)
@@ -174,18 +188,18 @@ add_spec_param(colInsulations, 'Площадь', '6. Материалы изол
 
 
 
-make_new_name(colEquipment, '-')
-make_new_name(colAccessory, '-')
-make_new_name(colTerminals, '-')
-make_new_name(colCurves, '+')
-make_new_name(colFlexCurves, '+')
-make_new_name(colFittings, '+')
-make_new_name(colPipeCurves, '+')
-make_new_name(colFlexPipeCurves, '+')
-make_new_name(colPipeAccessory, '-')
-make_new_name(colPipeFittings, '+')
-make_new_name(colPipeInsulations, '-')
-make_new_name(colInsulations, '-')
+make_new_name(colEquipment, '-', '+')
+make_new_name(colAccessory, '-', '+')
+make_new_name(colTerminals, '-', '+')
+make_new_name(colCurves, '+', '-')
+make_new_name(colFlexCurves, '+', '-')
+make_new_name(colFittings, '+', '-')
+make_new_name(colPipeCurves, '+', '-')
+make_new_name(colFlexPipeCurves, '+', '-')
+make_new_name(colPipeAccessory, '-', '+')
+make_new_name(colPipeFittings, '+', '-')
+make_new_name(colPipeInsulations, '+', '-')
+make_new_name(colInsulations, '-', '-')
 
 
 t.Commit()
