@@ -32,6 +32,8 @@ from System import Guid
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 
+
+
 def make_col(category):
     col = FilteredElementCollector(doc)\
                             .OfCategory(category)\
@@ -55,6 +57,45 @@ colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
 t = Transaction(doc, 'Обновление общей спеки')
 
 t.Start()
+
+def duct_thickness(collection):
+
+    try:
+        for element in collection:
+            if element.LookupParameter('Диаметр'):
+                Size = element.LookupParameter('Диаметр').AsValueString()
+                Size = float(Size)
+                if Size < 501:
+                    thickness = '0.5'
+                elif Size < 901:
+                    thickness = '0.7'
+                elif Size < 1251:
+                    thickness = '1'
+                else:
+                    thickness = '1.2'
+                    
+            if element.LookupParameter('Ширина'):
+                SizeA = element.LookupParameter('Ширина').AsValueString()
+                SizeB = element.LookupParameter('Высота').AsValueString()
+                if SizeA > SizeB:
+                    SizeC = SizeA
+                else:
+                    SizeC = SizeB
+                if SizeC < 301:
+                    thickness = '0.5'
+                elif SizeC < 1001:
+                    thickness = '0.7'
+                elif SizeC < 1251:
+                    thickness = '1'
+                else:
+                    thickness = '1.2'
+                    
+            if element.LookupParameter('ИОС_Толщина воздуховода'):
+                duct_thickness = element.LookupParameter('ИОС_Толщина воздуховода')
+                duct_thickness.Set(thickness)  
+            
+    except Exception:
+        pass   
 
 
 def make_new_name(collection, status, mark):
@@ -83,6 +124,10 @@ def make_new_name(collection, status, mark):
                     ElemType = SelectedLink.GetElement(ElemTypeId)
                     O_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
                     New_Name = O_Name + ' ' + Size
+                
+                if element.LookupParameter('ИОС_Толщина воздуховода'):
+                    duct_thickness = element.LookupParameter('ИОС_Толщина воздуховода').AsString()
+                    New_Name = New_Name + ' толщиной ' + duct_thickness + ' мм'
                 Spec_Name.Set(New_Name)
                 
             if element.LookupParameter('О_Марка'):
@@ -92,9 +137,8 @@ def make_new_name(collection, status, mark):
                 ElemType = SelectedLink.GetElement(ElemTypeId)
                 O_Mark = ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString()
             
-            if O_Mark != None and O_Mark != "" and mark == "+":
+            if O_Mark != None and O_Mark != "" and mark == "+" and O_Mark != "-":
                 Mark_Name = element.LookupParameter('ИОС_Наименование').AsString() + " " + "(" + O_Mark +")"
-                
                 Spec_Name.Set(Mark_Name)
         except Exception:
             pass    
@@ -209,6 +253,8 @@ make_new_name(colPipeAccessory, '-', '+')
 make_new_name(colPipeFittings, '+', '-')
 make_new_name(colPipeInsulations, '+', '-')
 make_new_name(colInsulations, '-', '-')
+
+duct_thickness(colCurves)
 
 
 t.Commit()
