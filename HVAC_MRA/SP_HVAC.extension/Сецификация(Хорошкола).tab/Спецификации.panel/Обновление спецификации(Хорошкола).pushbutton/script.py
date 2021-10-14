@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__title__ = 'Обновление общей \n спецификации(Хорошкола)'
+__title__ = 'Обновление общей \n спецификации'
 __doc__ = "Обновляет число подсчетных элементов"
 
 
@@ -65,30 +65,45 @@ def duct_thickness(collection):
             if element.LookupParameter('Диаметр'):
                 Size = element.LookupParameter('Диаметр').AsValueString()
                 Size = float(Size)
-                if Size < 501:
+                
+
+                if Size < 201:
                     thickness = '0.5'
-                elif Size < 901:
+                elif Size < 451:
+                    thickness = '0.6'
+                elif Size < 801:
                     thickness = '0.7'
                 elif Size < 1251:
-                    thickness = '1'
-                else:
+                    thickness = '1.0'
+                elif Size < 1601:
                     thickness = '1.2'
+                else:
+                    thickness = '1.4'
                     
             if element.LookupParameter('Ширина'):
-                SizeA = element.LookupParameter('Ширина').AsValueString()
-                SizeB = element.LookupParameter('Высота').AsValueString()
+                SizeA = float(element.LookupParameter('Ширина').AsValueString())
+                SizeB = float(element.LookupParameter('Высота').AsValueString())
                 if SizeA > SizeB:
                     SizeC = SizeA
                 else:
                     SizeC = SizeB
-                if SizeC < 301:
+                    
+                if element.LookupParameter('ИОС_Толщина воздуховода').AsString() == '1.0':
+                    continue
+                
+                if SizeC < 251:
                     thickness = '0.5'
                 elif SizeC < 1001:
                     thickness = '0.7'
-                elif SizeC < 1251:
-                    thickness = '1'
+                elif SizeC < 2001:
+                    thickness = '0.9'
                 else:
-                    thickness = '1.2'
+                    thickness = '1.4'
+                    
+            if element.LookupParameter('Тип изоляции').AsString() == 'ALU1 WIRED MAT 105 (25мм EI60)':
+                if thickness == '0.5' or thickness == '0.6' or thickness == '0.7':
+                    thickness = '0.8'
+                
                     
             if element.LookupParameter('ИОС_Толщина воздуховода'):
                 duct_thickness = element.LookupParameter('ИОС_Толщина воздуховода')
@@ -123,11 +138,17 @@ def make_new_name(collection, status, mark):
                     ElemTypeId = element.GetTypeId()
                     ElemType = SelectedLink.GetElement(ElemTypeId)
                     O_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
-                    New_Name = O_Name + ' ' + Size
-                
+                    
+                    if element.LookupParameter('ИОС_Позиция в спецификации').AsString() == '4. Трубопроводы':
+                        Dy = element.LookupParameter('Размер').AsString()
+                        Dy = Dy[1:]
+                        New_Name = O_Name + ' ' + 'Ду='+ Dy + ' (Днар. х т.с. ' + Size + ')'
+                    else:
+                        New_Name = O_Name + ' ' + Size
+
                 if element.LookupParameter('ИОС_Толщина воздуховода'):
                     duct_thickness = element.LookupParameter('ИОС_Толщина воздуховода').AsString()
-                    New_Name = New_Name + ' δ=' + duct_thickness + 'мм'
+                    New_Name = New_Name + ' толщиной ' + duct_thickness + ' мм'
                 Spec_Name.Set(New_Name)
                 
             if element.LookupParameter('О_Марка'):
@@ -146,17 +167,20 @@ def make_new_name(collection, status, mark):
     
     
 def common_param(element):
+    
+
+
     Size = ''
-    if element.Name == 'СП_Медная':
-        if element.LookupParameter('Внешний диаметр'):
-            Size = "Ø" + element.LookupParameter('Внешний диаметр').AsValueString()
-            Spec_Size = element.LookupParameter('ИОС_Размер')
-            Spec_Size.Set(Size)
-           
-    elif element.LookupParameter('Внешний диаметр'):
-        outer_size = element.LookupParameter('Внешний диаметр').AsValueString()
-        interior_size = element.LookupParameter('Внутренний диаметр').AsValueString()
+              
+    if element.LookupParameter('Внешний диаметр'):
+        outer_size = element.LookupParameter('Внешний диаметр').AsDouble() * 304.8
+        interior_size = element.LookupParameter('Внутренний диаметр').AsDouble() * 304.8
         thickness = (float(outer_size) - float(interior_size))/2
+        outer_size = str(outer_size)
+        
+        a = outer_size.split('.') #убираем 0 после запятой в наружном диаметре если он не имеет значения
+        if a[1] == '0':
+            outer_size = outer_size.replace(".0","")
         Size = "Ø" + outer_size + "x" + str(thickness)
         Spec_Size = element.LookupParameter('ИОС_Размер')
         Spec_Size.Set(Size)
@@ -165,48 +189,66 @@ def common_param(element):
         Spec_Size = element.LookupParameter('ИОС_Размер')
         Spec_Size.Set(Size)
         
+    elif element.LookupParameter('Диаметр'):
+        Size = element.LookupParameter('Диаметр').AsValueString()
+        Spec_Size = element.LookupParameter('ИОС_Размер')
+        Spec_Size.Set(Size)
+            
     elif element.LookupParameter('Размер трубы'):
         Size = element.LookupParameter('Размер трубы').AsString()
         Spec_Size = element.LookupParameter('ИОС_Размер')
         Spec_Size.Set(Size)
+        
+        #if element.LookupParameter('ИОС_Размер'):
+        #    Spec_Size = element.LookupParameter('ИОС_Размер')
+        #    Spec_Size.Set(Size)
     
-    #if element.LookupParameter('ИОС_Размер'):
-    #    Spec_Size = element.LookupParameter('ИОС_Размер')
-    #    Spec_Size.Set(Size)
+    if element.LookupParameter('ИОС_Позиция в спецификации').AsString() == '3. Воздухораспределители':
+        Spec_Size.Set('-')
     
-
+    if element.LookupParameter('ИОС_Позиция в спецификации').AsString() == '2. Арматура':
+        Spec_Size.Set('-')
+    
+    if element.LookupParameter('ИОС_Позиция в спецификации').AsString() == '2. Трубопроводная арматура':
+        Spec_Size.Set('-') 
         
 
 
         
 
 #этот блок для элементов с длиной или площадью(учесть что в единицах измерения проекта должны стоять м/м2, а то в спеку уйдут миллиметры
-def add_spec_param(collection, param, position):
+def add_spec_param(collection, position):
+    SelectedLink  = __revit__.ActiveUIDocument.Document
     k1 = 1.0
     k2 = 1.0
     for element in collection:
-        
-        try:
-                if element.LookupParameter('ИОС_Позиция в спецификации'):
-                    Pos = element.LookupParameter('ИОС_Позиция в спецификации')
-                    Pos.Set(position)    
-                if element.LookupParameter(param):
-                    Length = element.LookupParameter(param).AsValueString()
-                    Length = Length.split(' ')
-                    Length = Length[0] 
-                if element.LookupParameter('ИОС_Количество'):
+
+            ElemTypeId = element.GetTypeId()
+            ElemType = SelectedLink.GetElement(ElemTypeId)
+            O_Izm = ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d ')).AsString()
+
+            if O_Izm == 'м.п.':
+                param = 'Длина'
+            else:
+                param = 'Площадь'
+            if element.LookupParameter('ИОС_Позиция в спецификации'):
+                Pos = element.LookupParameter('ИОС_Позиция в спецификации')
+                Pos.Set(position)    
+            if element.LookupParameter(param):
+                Length = element.LookupParameter(param).AsValueString()
+                Length = Length.split(' ')
+                Length = Length[0] 
+            if element.LookupParameter('ИОС_Количество'):
+                if Length == None: continue
+                Spec_Length = element.LookupParameter('ИОС_Количество')
+                if param == 'Длина':
+                    target = (float(Length)/1000)*k1 
+                else:
+                    Length = Length.replace(",",".")
+                    target = float(Length)*k2
                     
-                    if Length == None: continue
-                    Spec_Length = element.LookupParameter('ИОС_Количество')
-                    if param != 'Площадь':
-                        target = (float(Length)/1000)*k1
-  
-                        
-                    else: target = float(Length)*k2
-                    Spec_Length.Set(target)
-                common_param(element)
-        except Exception:
-            pass
+                Spec_Length.Set(target)
+            common_param(element)
 
 #этот блок для элементов которые идут поштучно 
 def add_item_spec_param(collection, position):
@@ -229,15 +271,15 @@ def add_item_spec_param(collection, position):
 add_item_spec_param(colEquipment, '1.Оборудование')
 add_item_spec_param(colAccessory, '2. Арматура')
 add_item_spec_param(colTerminals, '3. Воздухораспределители')
-add_spec_param(colCurves, 'Длина', '4. Воздуховоды')
-add_spec_param(colFlexCurves, 'Длина', '4. Гибкие воздуховоды')
+add_spec_param(colCurves, '4. Воздуховоды')
+add_spec_param(colFlexCurves, '4. Гибкие воздуховоды')
 add_item_spec_param(colFittings, '5. Фасонные детали воздуховодов')
-add_spec_param(colPipeCurves, 'Длина', '4. Трубопроводы')
-add_spec_param(colFlexPipeCurves, 'Длина', '4. Гибкие трубопроводы')
+add_spec_param(colPipeCurves, '4. Трубопроводы')
+add_spec_param(colFlexPipeCurves, '4. Гибкие трубопроводы')
 add_item_spec_param(colPipeAccessory, '2. Трубопроводная арматура')
 add_item_spec_param(colPipeFittings, '5. Фасонные детали трубопроводов')
-add_spec_param(colPipeInsulations, 'Длина', '6. Материалы трубопроводной изоляции')
-add_spec_param(colInsulations, 'Площадь', '6. Материалы изоляции воздуховодов')
+add_spec_param(colPipeInsulations, '6. Материалы трубопроводной изоляции')
+add_spec_param(colInsulations, '6. Материалы изоляции воздуховодов')
 
 
 

@@ -68,7 +68,6 @@ def duct_thickness(collection):
                 
                 if element.LookupParameter('ИОС_Толщина воздуховода').AsString() == '1.0':
                     continue
-                    
                 if Size < 201:
                     thickness = '0.5'
                 elif Size < 451:
@@ -137,10 +136,10 @@ def make_new_name(collection, status, mark):
                     ElemType = SelectedLink.GetElement(ElemTypeId)
                     O_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
                     
-                    if O_Name == 'Трубы стальные бесшовные горячедеформированные (сталь 20)': #ЭТОТ БЛОК АКТУАЛЕН ТОЛЬКО ДЛЯ ТХС МАРС
+                    if element.LookupParameter('ИОС_Позиция в спецификации').AsString() == '4. Трубопроводы':
                         Dy = element.LookupParameter('Размер').AsString()
                         Dy = Dy[1:]
-                        New_Name = O_Name + ' ' + 'Ду='+ Dy + '(' + Size + ')'
+                        New_Name = O_Name + ' ' + 'Ду='+ Dy + ' (Днар. х т.с. ' + Size + ')'
                     else:
                         New_Name = O_Name + ' ' + Size
 
@@ -169,21 +168,26 @@ def common_param(element):
 
 
     Size = ''
-    if element.Name == 'СП_Медная':
-        if element.LookupParameter('Внешний диаметр'):
-            Size = "Ø" + element.LookupParameter('Внешний диаметр').AsValueString()
-            Spec_Size = element.LookupParameter('ИОС_Размер')
-            Spec_Size.Set(Size)
-               
-    elif element.LookupParameter('Внешний диаметр'):
-        outer_size = element.LookupParameter('Внешний диаметр').AsValueString()
-        interior_size = element.LookupParameter('Внутренний диаметр').AsValueString()
+              
+    if element.LookupParameter('Внешний диаметр'):
+        outer_size = element.LookupParameter('Внешний диаметр').AsDouble() * 304.8
+        interior_size = element.LookupParameter('Внутренний диаметр').AsDouble() * 304.8
         thickness = (float(outer_size) - float(interior_size))/2
+        outer_size = str(outer_size)
+        
+        a = outer_size.split('.') #убираем 0 после запятой в наружном диаметре если он не имеет значения
+        if a[1] == '0':
+            outer_size = outer_size.replace(".0","")
         Size = "Ø" + outer_size + "x" + str(thickness)
         Spec_Size = element.LookupParameter('ИОС_Размер')
         Spec_Size.Set(Size)
     elif element.LookupParameter('Размер'):
         Size = element.LookupParameter('Размер').AsString()
+        Spec_Size = element.LookupParameter('ИОС_Размер')
+        Spec_Size.Set(Size)
+        
+    elif element.LookupParameter('Диаметр'):
+        Size = element.LookupParameter('Диаметр').AsValueString()
         Spec_Size = element.LookupParameter('ИОС_Размер')
         Spec_Size.Set(Size)
             
@@ -223,7 +227,7 @@ def add_spec_param(collection, position):
             if O_Izm == 'м.п.':
                 param = 'Длина'
             else:
-                param = 'Площадь'                    
+                param = 'Площадь'
             if element.LookupParameter('ИОС_Позиция в спецификации'):
                 Pos = element.LookupParameter('ИОС_Позиция в спецификации')
                 Pos.Set(position)    
