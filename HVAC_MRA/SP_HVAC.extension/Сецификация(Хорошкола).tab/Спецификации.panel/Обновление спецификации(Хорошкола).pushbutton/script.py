@@ -148,7 +148,7 @@ def make_new_name(collection, status, mark):
 
                 if element.LookupParameter('ИОС_Толщина воздуховода'):
                     duct_thickness = element.LookupParameter('ИОС_Толщина воздуховода').AsString()
-                    New_Name = New_Name + ' толщиной ' + duct_thickness + ' мм'
+                    New_Name = O_Name + ' толщиной ' + duct_thickness + ' мм ' + Size
                 Spec_Name.Set(New_Name)
                 
             if element.LookupParameter('О_Марка'):
