@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__title__ = 'Обновление общей \n спецификации'
+__title__ = 'Обновление креплений'
 __doc__ = "Обновляет число подсчетных элементов"
 
 
@@ -34,7 +34,6 @@ view = doc.ActiveView
 
 
 
-
 def make_col(category):
     col = FilteredElementCollector(doc)\
                             .OfCategory(category)\
@@ -42,31 +41,15 @@ def make_col(category):
                             .ToElements()
     return col 
     
-colFittings = make_col(BuiltInCategory.OST_DuctFitting)    
-colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
 colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
 colCurves = make_col(BuiltInCategory.OST_DuctCurves)
-colFlexCurves = make_col(BuiltInCategory.OST_FlexDuctCurves)
-colFlexPipeCurves = make_col(BuiltInCategory.OST_FlexPipeCurves)
-colTerminals = make_col(BuiltInCategory.OST_DuctTerminal)
-colAccessory = make_col(BuiltInCategory.OST_DuctAccessory)
-colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
-colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
-colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
-colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
+
 
 t = Transaction(doc, 'Обновление общей спеки')
 
 t.Start()
 
-
-def new_code(collection):
-    for element in collection:
-        if element.LookupParameter('О_Шифр комплекта РД'):
-            element.LookupParameter('О_Шифр комплекта РД').Set('01Д/2020-СПЦ09-0201-ОВК01.07')
-
 def duct_thickness(collection):
-    SelectedLink  = __revit__.ActiveUIDocument.Document
 
     try:
         for element in collection:
@@ -74,7 +57,8 @@ def duct_thickness(collection):
                 Size = element.LookupParameter('Диаметр').AsValueString()
                 Size = float(Size)
                 
-
+                if element.LookupParameter('ИОС_Толщина воздуховода').AsString() == '1.0':
+                    continue
                 if Size < 201:
                     thickness = '0.5'
                 elif Size < 451:
@@ -107,15 +91,7 @@ def duct_thickness(collection):
                     thickness = '0.9'
                 else:
                     thickness = '1.4'
-                    
-            if element.LookupParameter('Тип изоляции').AsString() == 'ALU1 WIRED MAT 105 (25мм EI60)':
-                if thickness == '0.5' or thickness == '0.6' or thickness == '0.7':
-                    thickness = '0.8'
-            ElemTypeId = element.GetTypeId()
-            ElemType = SelectedLink.GetElement(ElemTypeId)    
-            if ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString() == 'Воздуховод из нержавеющей стали':
-                if thickness == '0.5' or thickness == '0.6' or thickness == '0.7':
-                    thickness = '0.8'
+                
                     
             if element.LookupParameter('ИОС_Толщина воздуховода'):
                 duct_thickness = element.LookupParameter('ИОС_Толщина воздуховода')
@@ -160,7 +136,7 @@ def make_new_name(collection, status, mark):
 
                 if element.LookupParameter('ИОС_Толщина воздуховода'):
                     duct_thickness = element.LookupParameter('ИОС_Толщина воздуховода').AsString()
-                    New_Name = O_Name + ' толщиной ' + duct_thickness + ' мм ' + Size
+                    New_Name = New_Name + ' толщиной ' + duct_thickness + ' мм'
                 Spec_Name.Set(New_Name)
                 
             if element.LookupParameter('О_Марка'):
@@ -225,103 +201,64 @@ def common_param(element):
         Spec_Size.Set('-') 
         
 
-
-        
-
-#этот блок для элементов с длиной или площадью(учесть что в единицах измерения проекта должны стоять м/м2, а то в спеку уйдут миллиметры
-def add_spec_param(collection, position):
-    SelectedLink  = __revit__.ActiveUIDocument.Document
-    k1 = 1.0
-    k2 = 1.0
-    for element in collection:
-
-            ElemTypeId = element.GetTypeId()
-            ElemType = SelectedLink.GetElement(ElemTypeId)
-            O_Izm = ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d ')).AsString()
-
-            if O_Izm == 'м.п.':
-                param = 'Длина'
-            else:
-                param = 'Площадь'
-            if element.LookupParameter('ИОС_Позиция в спецификации'):
-                Pos = element.LookupParameter('ИОС_Позиция в спецификации')
-                Pos.Set(position)    
-            if element.LookupParameter(param):
-                Length = element.LookupParameter(param).AsValueString()
-                Length = Length.split(' ')
-                Length = Length[0] 
-            if element.LookupParameter('ИОС_Количество'):
-                if Length == None: continue
-                Spec_Length = element.LookupParameter('ИОС_Количество')
-                if param == 'Длина':
-                    target = (float(Length)/1000)*k1 
-                else:
-                    Length = Length.replace(",",".")
-                    target = float(Length)*k2
-                    
-                Spec_Length.Set(target)
-            common_param(element)
-
-#этот блок для элементов которые идут поштучно 
-def add_item_spec_param(collection, position):
+def bracing_curves(collection):
     for element in collection:
         try:
-            if element.Name == 'СП_Вспомогательное_Спецификация':
-                continue
-            if element.Location:
-                if element.LookupParameter('ИОС_Позиция в спецификации'):
-                    Pos = element.LookupParameter('ИОС_Позиция в спецификации')
-                    Pos.Set(position)
+            ed_izm = element.LookupParameter('ВТБн_Единицы измерения креплений1')
+            ed_izm.Set('кг.')
+            if element.LookupParameter('Диаметр'):
+                dy = element.LookupParameter('Диаметр').AsValueString()
+            if element.LookupParameter('Эквивалентный диаметр'):
+                dy = element.LookupParameter('Эквивалентный диаметр').AsValueString()
+            if element.LookupParameter('Длина'):
+                long = element.LookupParameter('Длина').AsValueString()
                 
-                if element.LookupParameter('ИОС_Количество'):
-                    Spec_Length = element.LookupParameter('ИОС_Количество')
-                    Spec_Length.Set(1)
-                common_param(element)
+            if dy < 159:
+                kg = 0.33
+            elif dy < 314:
+                kg = 0.75
+            elif dy < 499:
+                kg = 1.8
+            elif dy < 709:
+                kg = 4
+            elif dy < 899:
+                kg = 6.5
+            else:
+                kg = 8.8
         except Exception:
-            continue
+            pass
+            
+def bracing_pipes(collection):
+    for element in collection:
+        try:
+            ed_izm = element.LookupParameter('ВТБн_Единицы измерения креплений1')
+            ed_izm.Set('кг.')
+            
+            if element.LookupParameter('Диаметр'):
+                dy = element.LookupParameter('Диаметр').AsValueString()
+            if element.LookupParameter('Длина'):
+                long = element.LookupParameter('Длина').AsValueString()
+
+
+            if dy < 159:
+                kg = 0.33
+            elif dy < 314:
+                kg = 0.75
+            elif dy < 499:
+                kg = 1.8
+            elif dy < 709:
+                kg = 4
+            elif dy < 899:
+                kg = 6.5
+            else:
+                kg = 8.8
+        except Exception:
+            pass      
         
-add_item_spec_param(colEquipment, '1.Оборудование')
-add_item_spec_param(colAccessory, '2. Арматура')
-add_item_spec_param(colTerminals, '3. Воздухораспределители')
-add_spec_param(colCurves, '4. Воздуховоды')
-add_spec_param(colFlexCurves, '4. Гибкие воздуховоды')
-add_item_spec_param(colFittings, '5. Фасонные детали воздуховодов')
-add_spec_param(colPipeCurves, '4. Трубопроводы')
-add_spec_param(colFlexPipeCurves, '4. Гибкие трубопроводы')
-add_item_spec_param(colPipeAccessory, '2. Трубопроводная арматура')
-add_item_spec_param(colPipeFittings, '5. Фасонные детали трубопроводов')
-add_spec_param(colPipeInsulations, '6. Материалы трубопроводной изоляции')
-add_spec_param(colInsulations, '6. Материалы изоляции воздуховодов')
 
 
+bracing_curves(colCurves)
 
-make_new_name(colEquipment, '-', '+')
-make_new_name(colAccessory, '-', '+')
-make_new_name(colTerminals, '-', '+')
-make_new_name(colCurves, '+', '-')
-make_new_name(colFlexCurves, '+', '-')
-make_new_name(colFittings, '+', '-')
-make_new_name(colPipeCurves, '+', '-')
-make_new_name(colFlexPipeCurves, '+', '-')
-make_new_name(colPipeAccessory, '-', '+')
-make_new_name(colPipeFittings, '+', '-')
-make_new_name(colPipeInsulations, '+', '-')
-make_new_name(colInsulations, '-', '-')
-
-duct_thickness(colCurves)
-
-new_code(colEquipment)
-new_code(colAccessory)
-new_code(colTerminals)
-new_code(colCurves)
-new_code(colFlexCurves)
-new_code(colFittings)
-new_code(colPipeCurves)
-new_code(colFlexPipeCurves)
-new_code(colPipeAccessory)
-new_code(colPipeFittings)
-new_code(colPipeInsulations)
-new_code(colInsulations)
 
 
 t.Commit()
