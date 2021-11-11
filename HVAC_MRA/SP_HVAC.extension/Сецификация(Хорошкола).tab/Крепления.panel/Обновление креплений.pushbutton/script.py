@@ -201,36 +201,7 @@ def common_param(element):
         Spec_Size.Set('-') 
         
 
-def bracing_curves(collection):
-    for element in collection:
-        try:
-            if element.LookupParameter('Диаметр'):
-                dy = element.LookupParameter('Диаметр').AsValueString()
-            if element.LookupParameter('Эквивалентный диаметр'):
-                dy = element.LookupParameter('Эквивалентный диаметр').AsValueString()
-                dy = float(dy)
-            if element.LookupParameter('Длина'):
-                long = element.LookupParameter('Длина').AsValueString()
-                long = float(long)/1000
-                
-            if dy < 159:
-                kg = 0.33
-            elif dy < 314:
-                kg = 0.75
-            elif dy < 499:
-                kg = 1.8
-            elif dy < 709:
-                kg = 4
-            elif dy < 899:
-                kg = 6.5
-            else:
-                kg = 8.8
-            
-            if element.LookupParameter('Количество креплений'):
-                element.LookupParameter('Количество креплений').Set(long*kg)
-            
-        except Exception:
-            pass
+
             
 def bracing_curves_v2(collection):
     for element in collection:
@@ -256,11 +227,48 @@ def bracing_curves_v2(collection):
             
         except Exception:
             pass
+        
+def bracing_pipes(collection):
+    for element in collection:
+        try:
+            if element.LookupParameter('Диаметр'):
+                dy = element.LookupParameter('Диаметр').AsDouble() * 304.8
+            if element.LookupParameter('Площадь'):
+                long = (element.LookupParameter('Длина').AsDouble() * 304.8)/1000
+                
+
+            if dy < 16:
+                kg = 0.72
+            elif dy < 21:
+                kg = 0.55
+            elif dy < 26:
+                kg = 0.625
+            elif dy < 33:
+                kg = 0.7
+            elif dy < 41:
+                kg = 0.72
+            elif dy < 51:
+                kg = 0.81
+            elif dy < 71:
+                kg = 0.85
+            elif dy < 81:
+                kg = 1.07
+            elif dy < 101:
+                kg = 1.33
+            elif dy < 126:
+                kg = 1.48
+            else:
+                kg = 1.76
             
+            if element.LookupParameter('Количество креплений'):
+                element.LookupParameter('Количество креплений').Set(long*kg)
+            
+        except Exception:
+            pass            
 
 
 bracing_curves_v2(colCurves)
-
+bracing_pipes(colPipeCurves)
 
 
 t.Commit()

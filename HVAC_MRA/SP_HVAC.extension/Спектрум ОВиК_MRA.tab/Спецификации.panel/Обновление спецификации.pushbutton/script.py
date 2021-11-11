@@ -158,6 +158,20 @@ def make_new_name(collection, status, mark):
             if O_Mark != None and O_Mark != "" and mark == "+" and O_Mark != "-":
                 Mark_Name = element.LookupParameter('ИОС_Наименование').AsString() + " " + "(" + O_Mark +")"
                 Spec_Name.Set(Mark_Name)
+                
+                        
+            O_Izm = ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d ')).AsString()
+            if O_Izm == 'м.п.':
+                if element.LookupParameter('ИОС_Позиция в спецификации').AsString() == '6. Материалы трубопроводной изоляции':
+                    L = element.LookupParameter('Длина').AsDouble() * 304.8
+                    S = element.LookupParameter('Площадь').AsDouble() * 0.092903
+                    fi = element.LookupParameter('Толщина изоляции').AsDouble() * 304.8
+                    d = S/(3.14 * L/1000) - fi*2/1000
+
+                    New_Name = O_Name + ' поверх трубы Ø' + str(round((d*1000), 1))
+                    Spec_Name.Set(New_Name)
+
+                
         except Exception:
             pass    
 
@@ -165,8 +179,6 @@ def make_new_name(collection, status, mark):
     
 def common_param(element):
     
-
-
     Size = ''
               
     if element.LookupParameter('Внешний диаметр'):
@@ -195,10 +207,6 @@ def common_param(element):
         Size = element.LookupParameter('Размер трубы').AsString()
         Spec_Size = element.LookupParameter('ИОС_Размер')
         Spec_Size.Set(Size)
-        
-        #if element.LookupParameter('ИОС_Размер'):
-        #    Spec_Size = element.LookupParameter('ИОС_Размер')
-        #    Spec_Size.Set(Size)
     
     if element.LookupParameter('ИОС_Позиция в спецификации').AsString() == '3. Воздухораспределители':
         Spec_Size.Set('-')
