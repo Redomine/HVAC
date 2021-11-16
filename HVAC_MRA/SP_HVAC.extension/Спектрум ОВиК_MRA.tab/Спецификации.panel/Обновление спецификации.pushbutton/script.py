@@ -13,6 +13,7 @@ clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neut
 import sys
 import System
 import WriteLog
+import math
 
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import TaskDialog
@@ -161,16 +162,25 @@ def make_new_name(collection, status, mark):
                 
                         
             O_Izm = ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d ')).AsString()
-            if O_Izm == 'м.п.':
-                if element.LookupParameter('ИОС_Позиция в спецификации').AsString() == '6. Материалы трубопроводной изоляции':
+            if element.LookupParameter('ИОС_Позиция в спецификации').AsString() == '6. Материалы трубопроводной изоляции':
+                if O_Izm == 'м.п.':
                     L = element.LookupParameter('Длина').AsDouble() * 304.8
                     S = element.LookupParameter('Площадь').AsDouble() * 0.092903
                     fi = element.LookupParameter('Толщина изоляции').AsDouble() * 304.8
                     d = S/(3.14 * L/1000) - fi*2/1000
+                    d = math.ceil(d*1000)
+                    a = str(d)
+                    a = a.split('.') #убираем 0 после запятой в наружном диаметре если он не имеет значения
+                    if a[1] == '0':
+                        d = str(d)
+                        d = d.replace(".0","")
 
-                    New_Name = O_Name + ' поверх трубы Ø' + str(round((d*1000), 1))
-                    Spec_Name.Set(New_Name)
-
+                    New_Name = O_Name + ' внутренним диаметром Ø' + str(d)
+                    
+                else:
+                    New_Name = O_Name
+                
+                Spec_Name.Set(New_Name)
                 
         except Exception:
             pass    
