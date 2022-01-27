@@ -73,8 +73,7 @@ def duct_thickness(collection):
             if element.LookupParameter('Диаметр'):
                 Size = element.LookupParameter('Диаметр').AsValueString()
                 Size = float(Size)
-                
-
+        
                 if Size < 201:
                     thickness = '0.5'
                 elif Size < 451:
@@ -280,6 +279,125 @@ def add_item_spec_param(collection, position):
         except Exception:
             continue
         
+def hor(collection):
+    SelectedLink  = __revit__.ActiveUIDocument.Document
+
+    for element in collection:
+        ElemTypeId = element.GetTypeId()
+        ElemType = SelectedLink.GetElement(ElemTypeId)
+        O_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
+        IOS_Name = element.LookupParameter('ИОС_Наименование').AsString()
+        Spec_Name = element.LookupParameter('ИОС_Наименование')
+        
+        if 'Врезка' not in O_Name:
+                
+            if 'Тройник круглого сечения' in O_Name or 'Переход круглого сечения ' in O_Name or 'Отвод круглого сечения' in O_Name:
+                if 'Тройник круглого сечения' in O_Name:
+                    size_1 = int(element.LookupParameter('R2').AsValueString())*2
+                    size_2 = int(element.LookupParameter('R0').AsValueString())*2
+                    
+                    size = max(size_1, size_2)
+                    
+                    
+                if 'Переход круглого сечения ' in O_Name:
+                    size_1 = int(element.LookupParameter('R1').AsValueString())*2
+                    size_2 = int(element.LookupParameter('R0').AsValueString())*2
+                    
+                    size = max(size_1, size_2)
+                    
+                if 'Отвод круглого сечения' in O_Name:
+                    size = int(element.LookupParameter('Радиус воздуховода').AsValueString())*2
+                    
+                if size < 201:
+                    thickness = '0.5'
+                elif size < 451:
+                    thickness = '0.6'
+                elif size < 801:
+                    thickness = '0.7'
+                elif size < 1251:
+                    thickness = '1.0'
+                elif size < 1601:
+                    thickness = '1.2'
+                else:
+                    thickness = '1.4'
+                
+            else:
+                if 'Тройник прямоугольного сечения' in IOS_Name:
+                    size_1 = int(element.LookupParameter('Ширина воздуховода 1').AsValueString())
+                    size_2 = int(element.LookupParameter('Ширина воздуховода 3').AsValueString())
+                    size_3 = int(element.LookupParameter('Высота воздуховода').AsValueString())
+                    
+                    size = max(size_1, size_2, size_3)
+
+                if 'Переход прямоугольного сечения' in O_Name:
+                    size_1 = int(element.LookupParameter('Ширина1').AsValueString())
+                    size_2 = int(element.LookupParameter('Ширина2').AsValueString())
+                    size_3 = int(element.LookupParameter('Высота1').AsValueString())
+                    size_4 = int(element.LookupParameter('Высота2').AsValueString())
+                    size = max(size_1, size_2, size_3, size_4)
+                    
+                if 'Переход  с прямоугольного на круглое сечение' in O_Name:
+                    size_1 = int(element.LookupParameter('H0').AsValueString())
+                    size_2 = int(element.LookupParameter('W0').AsValueString())
+                    
+                    size = max(size_1, size_2)
+                    
+                if 'Отвод прямоугольного сечения' in O_Name:
+                    if element.LookupParameter('Ширина воздуховода'):
+                        size_1 = int(element.LookupParameter('Ширина воздуховода').AsValueString())
+                    if element.LookupParameter('Ширина'):
+                        size_1 = int(element.LookupParameter('Ширина').AsValueString())
+                    if element.LookupParameter('Высота воздуховода'):
+                        size_2 = int(element.LookupParameter('Высота воздуховода').AsValueString())
+                    if element.LookupParameter('Высота'):
+                        size_2 = int(element.LookupParameter('Высота').AsValueString())
+                    
+                    size = max(size_1, size_2)
+                    
+                if size < 251:
+                    thickness = '0.5'
+                elif size < 1001:
+                    thickness = '0.7'
+                elif size < 2001:
+                    thickness = '0.9'
+                else:
+                    thickness = '1.4'
+                    
+                    
+                    
+            if element.LookupParameter('Тип изоляции').AsString() == 'ALU1 WIRED MAT 105 (25мм EI60)':
+                if thickness == '0.5' or thickness == '0.6' or thickness == '0.7':
+                    thickness = '0.8'
+            ElemTypeId = element.GetTypeId()
+            ElemType = SelectedLink.GetElement(ElemTypeId)    
+            if 'нержавеющей' in O_Name:
+                if thickness == '0.5' or thickness == '0.6' or thickness == '0.7':
+                    thickness = '0.8'
+                    
+            Mark_Name = IOS_Name + " толщиной " + thickness + " мм"
+            
+            if 'Отвод' in IOS_Name:
+                angle = element.LookupParameter('Угол').AsValueString()
+                angle = angle[:-4]
+                angle = int(angle)
+                if angle < 31:
+                    angle = '30'
+                elif angle < 46:
+                    angle= '45'
+                elif angle < 61:
+                    angle= '60'                
+                else:
+                    angle = '90'
+                    
+                Mark_Name = IOS_Name + " толщиной " + thickness + " мм" + " под углом " + angle + "°"    
+
+            Spec_Name.Set(Mark_Name)
+
+            
+            
+                    
+            
+        
 add_item_spec_param(colEquipment, '1.Оборудование')
 add_item_spec_param(colAccessory, '2. Арматура')
 add_item_spec_param(colTerminals, '3. Воздухораспределители')
@@ -322,6 +440,9 @@ new_code(colPipeAccessory)
 new_code(colPipeFittings)
 new_code(colPipeInsulations)
 new_code(colInsulations)
+
+
+hor(colFittings)
 
 
 t.Commit()
