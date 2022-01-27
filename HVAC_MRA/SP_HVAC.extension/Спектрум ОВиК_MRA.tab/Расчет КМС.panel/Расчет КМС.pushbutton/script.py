@@ -72,15 +72,38 @@ def getDpElbow(element):
         dp = 0.32*(v1**1.8)
     elif angle<=1 and angle>0.7:
         dp = 0.32*(v1**1.8)/2
-    elif angle>0 and angle<=0.7:
+    elif angle>0 and angle<=0.7: 
         dp = 0.32*(v1**1.8)/3
-    else:
-        dp = 0.864*(((v1-v2)**0.3048)**1.8)
     return dp
 
 def getDpTransition(element):
     a = getConnectors(element)
-    dp = 10
+    try:
+        S1 = a[0].Height*0.3048*a[0].Width*0.3048
+    except:
+        S1 = 3.14*0.3048*0.3048*a[0].Radius**2
+    try:
+        S2 = a[1].Height*0.3048*a[1].Width*0.3048
+    except:
+        S2 = 3.14*0.3048*0.3048*a[1].Radius**2
+        
+    v1 = a[0].Flow*101.94/3600/S1
+    v2 = a[1].Flow*101.94/3600/S2
+    
+    #проверяем в какую сторону дует воздух чтоб выяснить расширение это или заужение
+    if str(a[0].Direction) == "In":
+        v_1 = v1
+        v_2 = v2
+    if str(a[0].Direction) == "Out":
+        v_1 = v2
+        v_2 = v1
+    
+    if v_1 > v_2:
+        dp = 0.864*(v_1 - v_2)**1.8
+    if v_2 > v_1:
+        dp = 0.146*(v_2 - v_1)**1.9
+            
+
     return dp
     
 
@@ -127,7 +150,7 @@ for el in elems:
         schema = lc[11].GetDataSchema()
         field = schema.GetField("PressureLoss")
         entity=fitting.GetEntity(schema)
-        entity.Set[field.ValueType](field, str(int(dp/3.3)))
+        entity.Set[field.ValueType](field, str(int(math.ceil(dp/3.3))))
         fitting.SetEntity(entity)
         
         
@@ -143,7 +166,6 @@ t_2.Start()
 colSystems = make_col(BuiltInCategory.OST_DuctSystem)
 for el in colSystems:
     sysType = doc.GetElement(el.GetTypeId())
-
     sysType.CalculationLevel = sysType.CalculationLevel.None 
 t_2.Commit()
 
