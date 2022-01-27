@@ -135,6 +135,23 @@ for el in elems:
     except Exception:
         pass
 
-
-
 t.Commit()
+
+
+t_2 = Transaction(doc, 'Выключение систем')
+t_2.Start()
+colSystems = make_col(BuiltInCategory.OST_DuctSystem)
+for el in colSystems:
+    sysType = doc.GetElement(el.GetTypeId())
+
+    sysType.CalculationLevel = sysType.CalculationLevel.None 
+t_2.Commit()
+
+t_3 = Transaction(doc, 'Включение систем')
+t_3.Start()
+colSystems = make_col(BuiltInCategory.OST_DuctSystem)
+for el in colSystems:
+    sysType = doc.GetElement(el.GetTypeId())
+
+    sysType.CalculationLevel = sysType.CalculationLevel.All 
+t_3.Commit()
