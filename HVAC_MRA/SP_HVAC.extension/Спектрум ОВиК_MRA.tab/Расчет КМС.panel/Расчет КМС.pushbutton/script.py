@@ -103,10 +103,29 @@ def getDpTransition(element):
     if v_2 > v_1:
         dp = 0.146*(v_2 - v_1)**1.9
             
-
     return dp
     
-
+def getDpTee(element):
+    a = getConnectors(element)
+    dp = 10
+    try:
+        S1 = a1.Height*0.3048*a1.Width*0.3048
+    except:
+        S1 = 3.14*0.3048*0.3048*a1.Radius**2
+    try:
+        S2 = a2.Height*0.3048*a2.Width*0.3048
+    except:
+        S2 = 3.14*0.3048*0.3048*a2.Radius**2
+    try:
+        S3 = a3.Height*0.3048*a3.Width*0.3048
+    except:
+        S3 = 3.14*0.3048*0.3048*a3.Radius**2
+        
+    v1 = a1.Flow*101.94/3600/S1
+    v2 = a2.Flow*101.94/3600/S2
+    v3 = a3.Flow*101.94/3600/S3
+            
+    return dp
         
 def getLossMethods(serviceId):
     lc=[]
@@ -130,7 +149,9 @@ def getServerById(serverGUID, serviceId):
             return server
     return null
 
+
 elems=colFittings
+
 
 for el in elems:
     try:
@@ -140,6 +161,9 @@ for el in elems:
             
         if str(el.MEPModel.PartType) == 'Transition':
             dp = getDpTransition(el)
+            
+        if str(el.MEPModel.PartType) == 'Tee':
+            dp = getDpTee(el)
         
         eleId = el.Id
         fitting = doc.GetElement(eleId)
