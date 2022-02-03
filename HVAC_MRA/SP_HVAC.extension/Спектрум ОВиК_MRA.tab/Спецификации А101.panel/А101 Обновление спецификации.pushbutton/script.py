@@ -53,24 +53,89 @@ t = Transaction(doc, 'Обновление общей спеки')
 
 t.Start()
 
+def getNumber(Number1, Number2):
+    if Number1 > Number2:
+        Number = Number1
+    else:
+        Number = Number2
+    return Number
+
 def duct_thickness(element):
     mode = ''
-    if str(element.Category.Name) == 'Соединительные детали воздуховодов':
+    
+    if str(element.Category.Name) == 'Воздуховоды':
         a = getConnectors(element)
         try:
-            SizeA = a[0].Width*0.3048
-            SizeB = a[1].Width*0.3048
+            SizeA = a[0].Width * 304.8
+            SizeB = a[0].Height * 304.8
+            Size = getNumber(SizeA, SizeB)
             mode = 'W'
         except:
-            Size = a[0].Radius*2*0.3048
+            Size = a[0].Radius*2 * 304.8
             mode = 'R'
+    
+    if str(element.Category.Name) == 'Соединительные детали воздуховодов':
+        a = getConnectors(element)
+        if str(element.MEPModel.PartType) == 'Elbow':        
+            try:
+                SizeA = a[0].Width * 304.8
+                SizeB = a[0].Height * 304.8
+                Size = getNumber(SizeA, SizeB)
+                mode = 'W'
+            except:
+                Size = a[0].Radius*2 * 304.8
+                mode = 'R'
+            
+        if str(element.MEPModel.PartType) == 'Transition':
+            circles = []
+            squares = []
+            try:
+                SizeA = a[0].Height * 304.8
+                SizeA_1 = a[0].Width * 304.8
+                squares.append(SizeA)
+                squares.append(SizeA_1)
+                SizeA = getNumber(SizeA, SizeA_1)
+            except:
+                SizeA = a[0].Radius*2*304.8
+                circles.append(SizeA)
+            try:
+                SizeB = a[1].Height * 304.8
+                SizeB_1 = a[1].Width * 304.8
+                squares.append(SizeB)
+                squares.append(SizeB_1)
+                SizeB = getNumber(SizeB, SizeB_1)
+            except:
+                SizeB = a[1].Radius*2* 304.8
+                circles.append(SizeB)
+            
+            
+            Size = getNumber(SizeA, SizeB)
+            if Size in squares: mode = 'W'
+            if Size in circles: mode = 'R'
+            
+        if str(element.MEPModel.PartType) == 'Tee':
+            try:
+                SizeA = a[0].Width * 304.8
+                SizeA_1 = a[0].Height * 304.8
+                SizeB = a[1].Width * 304.8
+                SizeB_1 = a[1].Height * 304.8
+                SizeC = a[2].Width * 304.8
+                SizeC_1 = a[2].Height * 304.8
+                
+                Size = getNumber(SizeA, SizeB)
+                Size = getNumber(Size, SizeC) 
+                mode = 'W'
+            except:
+                SizeA = a[0].Radius*2 * 304.8
+                SizeB = a[1].Radius*2 * 304.8
+                SizeC = a[2].Radius*2 * 304.8
+                
+                Size = getNumber(SizeA, SizeB)
+                Size = getNumber(Size, SizeC)
+                mode = 'R'
         
-    if element.LookupParameter('Диаметр') or mode == 'R':
-        
-        if mode != 'R':
-            Size = element.LookupParameter('Диаметр').AsValueString()
-            Size = float(Size)
-        
+   
+    if mode == 'R': 
         if Size < 201:
             thickness = '0.5'
         elif Size < 451:
@@ -82,25 +147,18 @@ def duct_thickness(element):
         elif Size < 1601:
             thickness = '1.2'
         else:
-            thickness = '1.4'
-            
-    if element.LookupParameter('Ширина') or mode == 'W':
-        if mode != 'W':
-            SizeA = float(element.LookupParameter('Ширина').AsValueString())
-            SizeB = float(element.LookupParameter('Высота').AsValueString())
-        if SizeA > SizeB:
-            SizeC = SizeA
-        else:
-            SizeC = SizeB
-        
-        if SizeC < 251:
+            thickness = '1.4'  
+    if mode == 'W':
+        if Size < 251:
             thickness = '0.5'
-        elif SizeC < 1001:
+        elif Size < 1001:
             thickness = '0.7'
-        elif SizeC < 2001:
+        elif Size < 2001:
             thickness = '0.9'
         else:
             thickness = '1.4'
+
+            
     return thickness
  
 
@@ -129,7 +187,7 @@ def make_new_name(collection):
         if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '4. Трубопроводы':
             external_size = element.LookupParameter('Внешний диаметр').AsDouble() * 304.8
             internal_size = element.LookupParameter('Внутренний диаметр').AsDouble() * 304.8
-            pipe_thickness = external_size - internal_size 
+            pipe_thickness = (external_size - internal_size)/2 
             
 
             Dy = element.LookupParameter('Диаметр').AsDouble() * 304.8
@@ -152,15 +210,16 @@ def make_new_name(collection):
                     New_Name = ADSK_Name + ' внутренним диаметром Ø' + str(d)
                     
         if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
+            stainless_types
+            EI_insulation_types
             
             New_Name = ADSK_Name + ' ' + element.LookupParameter('Размер').AsString()
-            if str(element.MEPModel.PartType) == 'Elbow':
+            if str(element.MEPModel.PartType) == 'Elbow' or str(element.MEPModel.PartType) == 'Transition' or str(element.MEPModel.PartType) == 'Tee':
                 thickness = duct_thickness(element)
-                New_Name = ADSK_Name + ' толщиной ' + thickness + ' мм'
+                New_Name = ADSK_Name + ' ' + element.LookupParameter('Размер').AsString() + ' толщиной ' + thickness + ' мм'
 
-                    
-                     
-            
+
+
         Spec_Name.Set(New_Name)
 
 def getConnectors(element):
