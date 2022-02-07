@@ -19,15 +19,19 @@ from Autodesk.Revit.UI.Selection import ObjectType
 from System.Collections.Generic import List
 from rpw.ui.forms import SelectFromList
 from System import Guid
+from itertools import groupby
 
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 
 #Переменные для расчета
-stainless_types = ['Нержавеющая сталь']
-EI_insulation_types = ['EI60']
+stainless_ducts = ['Воздуховоды из черной стали']
+stainless_fittings = ['Отвод из черной стали круглый']
+EI_insulation_types = ['Огнезащитное комбинированное покрытие воздуховодов Е I 30, толщина 5мм,с жаростойкой мастикой "Kleber",расход(0,7кг/м2)']
 length_reserve = 1.0 #запас длинны воздуховодов
 area_reserve = 1.0 #запас длинны воздуховодов
+sort_dependent_by_equipment = True #включаем или выключаем сортировку вложенных семейств по их родителям
+
 
 def make_col(category):
     col = FilteredElementCollector(doc)\
@@ -210,7 +214,7 @@ def make_new_name(collection):
                     New_Name = ADSK_Name + ' внутренним диаметром Ø' + str(d)
                     
         if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
-            stainless_types
+            stainless_ducts
             EI_insulation_types
             
             New_Name = ADSK_Name + ' ' + element.LookupParameter('Размер').AsString()
@@ -320,7 +324,68 @@ def getNumericalParam(collection, position):
         except Exception:
             pass
         
-getNumericalParam(colEquipment, '1.Оборудование')
+def getDependent(collection):
+    SelectedLink  = __revit__.ActiveUIDocument.Document
+    new_group = 1
+    d = {}
+    for element in collection:
+        k = element.LookupParameter('Семейство и типоразмер').AsValueString()
+
+        #print element.LookupParameter('Семейство и типоразмер').AsValueString()
+        if k not in d:
+            d[k] = new_group
+            new_group = new_group + 1
+            if element.LookupParameter('ФОП_ВИС_Группирование'):
+                Pos = element.LookupParameter('ФОП_ВИС_Группирование')
+                Pos.Set('1-'+str(d[k])+' 0'+'. Обрудование')
+            
+        else:            
+            if element.LookupParameter('ФОП_ВИС_Группирование'):
+                Pos = element.LookupParameter('ФОП_ВИС_Группирование')
+                Pos.Set('1-'+str(d[k])+' 0'+'. Обрудование')
+            
+        
+        dependent = element.GetSubComponentIds()
+        
+        numbering = []
+        
+        for x in dependent:
+            numbering.append(SelectedLink.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString())
+        numbering.sort()
+
+        numbering = [el for el, _ in groupby(numbering)]
+        
+        numbering_d = {}
+        number = 1
+        for name in numbering:
+            print name
+            if name not in numbering_d:
+                numbering_d[name] = number
+                number = number + 1
+
+
+        for x in dependent:
+            name = SelectedLink.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное').AsString()
+            new_name = SelectedLink.GetElement(x).LookupParameter('ФОП_ВИС_Наименование комбинированное')
+            new_name.Set(str(numbering_d[name]) +'. ' + name)
+
+            
+        
+        for x in dependent:
+            dep = SelectedLink.GetElement(x)
+            group ='1-'+str(d[k])+' 1'+'. Обрудование'
+            if dep.LookupParameter('ФОП_ВИС_Группирование'):
+                Pos = dep.LookupParameter('ФОП_ВИС_Группирование')
+                Pos.Set(group)
+
+
+            
+
+                        
+        
+    
+        
+getNumericalParam(colEquipment, '1. Оборудование')
 getNumericalParam(colAccessory, '2. Арматура')
 getNumericalParam(colTerminals, '3. Воздухораспределители')
 getNumericalParam(colPipeAccessory, '2. Трубопроводная арматура')
@@ -349,7 +414,7 @@ make_new_name(colPipeFittings)
 make_new_name(colPipeInsulations)
 make_new_name(colInsulations)
 
-# duct_thickness(colCurves)
-
+if sort_dependent_by_equipment == True:
+    getDependent(colEquipment)
 
 t.Commit()
