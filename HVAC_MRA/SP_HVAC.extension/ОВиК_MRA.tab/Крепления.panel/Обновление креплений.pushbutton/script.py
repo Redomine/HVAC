@@ -22,8 +22,6 @@ from pyrevit import revit
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 
-
-
 def make_col(category):
     col = FilteredElementCollector(doc)\
                             .OfCategory(category)\
@@ -34,6 +32,18 @@ def make_col(category):
 colPipes = make_col(BuiltInCategory.OST_PipeCurves)
 colCurves = make_col(BuiltInCategory.OST_DuctCurves)
 colModel = make_col(BuiltInCategory.OST_GenericModel)
+# create a filtered element collector set to Category OST_Mass and Class FamilySymbol
+collector = FilteredElementCollector(doc)
+collector.OfCategory(BuiltInCategory.OST_GenericModel)
+collector.OfClass(FamilySymbol)
+famtypeitr = collector.GetElementIdIterator()
+famtypeitr.Reset()
+loc = XYZ(0, 0, 0)
+for element in famtypeitr:
+    famtypeID = element
+    famsymb = doc.GetElement(famtypeID)
+    if famsymb.Family.Name == '_Заглушка для спецификаций':
+        temporary = famsymb
 
 def bracing_curves_v2(collection):
     for element in collection:
@@ -94,56 +104,50 @@ def bracing_pipes(collection):
     except Exception:
         pass
 
-with revit.Transaction("Обновление общей спеки"):
-    bracing_curves_v2(colCurves)
-    bracing_pipes(colPipes)
-    ADSK_System_Names = []
-    System_Named = True
-
-    for element in colPipes:
-        if element.LookupParameter('ADSK_Имя системы').AsString() == None:
-            System_Named = False
-            continue
-        if element.LookupParameter('ADSK_Имя системы').AsString() not in ADSK_System_Names:
-            ADSK_System_Names.append(element.LookupParameter('ADSK_Имя системы').AsString())
-
-    if System_Named == False:
-        print 'Есть элементы у которых не заполнен параметр ADSK_Имя системы, для них не произведен расчет'
-
-    #при каждом повторе расчета удаляем старые версии
-    for element in colModel:
-        if element.LookupParameter('Семейство').AsValueString() == '_Заглушка для спецификаций':
-            doc.Delete(element.Id)
-
-    #в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
-    # create a filtered element collector set to Category OST_Mass and Class FamilySymbol
-    collector = FilteredElementCollector(doc)
-    collector.OfCategory(BuiltInCategory.OST_GenericModel)
-    collector.OfClass(FamilySymbol)
-    famtypeitr = collector.GetElementIdIterator()
-    famtypeitr.Reset()
-    loc = XYZ(0, 0, 0)
-    for element in famtypeitr:
-        famtypeID = element
-        famsymb = doc.GetElement(famtypeID)
-        if famsymb.Family.Name == '_Заглушка для спецификаций':
-            temporary = famsymb
-
+def new_position(Name, Maker, Number):
     for system in ADSK_System_Names:
         familyInst = doc.Create.NewFamilyInstance(loc, temporary, Structure.StructuralType.NonStructural)
 
     colModel = make_col(BuiltInCategory.OST_GenericModel)
-
     Models = []
     for element in colModel:
         if element.LookupParameter('Семейство').AsValueString() == '_Заглушка для спецификаций':
-            Models.append(element)
+            if element.LookupParameter('ФОП_ВИС_Группирование').AsString() != '7. Материалы креплений':
+                Models.append(element)
 
     for system in ADSK_System_Names:
         element = Models[0]
         element.LookupParameter('ADSK_Имя системы').Set(system)
         element.LookupParameter('ФОП_ВИС_Группирование').Set('7. Материалы креплений')
-        element.LookupParameter('ФОП_ВИС_Наименование комбинированное').Set('Шпилька, резьба M8, оцинкованная')
-        element.LookupParameter('ADSK_Завод-изготовитель').Set('Сантехкомплект')
-        element.LookupParameter('ФОП_ВИС_Число').Set(20)
+        element.LookupParameter('ФОП_ВИС_Наименование комбинированное').Set(Name)
+        element.LookupParameter('ADSK_Завод-изготовитель').Set(Maker)
+        element.LookupParameter('ФОП_ВИС_Число').Set(Number)
         Models.pop(0)
+
+ADSK_System_Names = []
+System_Named = True
+
+for element in colPipes:
+    if element.LookupParameter('ADSK_Имя системы').AsString() == None:
+        System_Named = False
+        continue
+    if element.LookupParameter('ADSK_Имя системы').AsString() not in ADSK_System_Names:
+        ADSK_System_Names.append(element.LookupParameter('ADSK_Имя системы').AsString())
+
+if System_Named == False:
+    print 'Есть элементы труб у которых не заполнен параметр ADSK_Имя системы, для них не произведен расчет'
+
+with revit.Transaction("Обновление общей спеки"):
+    bracing_curves_v2(colCurves)
+    bracing_pipes(colPipes)
+    #при каждом повторе расчета удаляем старые версии
+    for element in colModel:
+        if element.LookupParameter('Семейство').AsValueString() == '_Заглушка для спецификаций':
+            doc.Delete(element.Id)
+
+#в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
+with revit.Transaction("Обновление общей спеки"):
+    new_position('Шпилька, резьба M8, оцинкованная', 'Сантехкомплект', 20)
+
+with revit.Transaction("Хомута грувлок"):
+    new_position('Хомута под грувлок', 'Сантехкомплект', 20)
