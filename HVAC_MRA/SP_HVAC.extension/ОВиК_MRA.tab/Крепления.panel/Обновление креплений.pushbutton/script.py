@@ -12,23 +12,13 @@ clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neut
 
 import sys
 import System
-import WriteLog
 
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import TaskDialog
 from Autodesk.Revit.UI.Selection import ObjectType
-from rpw.ui.forms import CommandLink, TaskDialog
-from rpw.ui.forms import select_file
-from rpw.ui.forms import TextInput
-from rpw.ui.forms import SelectFromList
-from rpw.ui.forms import Alert
 from System.Collections.Generic import List
-from rpw.ui.forms import SelectFromList
-import System.Drawing
-import System.Windows.Forms
-from System.Drawing import *
-from System.Windows.Forms import *
 from System import Guid
+from pyrevit import revit
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
 
@@ -41,11 +31,12 @@ def make_col(category):
                             .ToElements()
     return col 
     
-colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
+colPipes = make_col(BuiltInCategory.OST_PipeCurves)
 colCurves = make_col(BuiltInCategory.OST_DuctCurves)
+colModel = make_col(BuiltInCategory.OST_GenericModel)
+
 def bracing_curves_v2(collection):
     for element in collection:
-
         try:
             if element.LookupParameter('Диаметр'):
                 dy = element.LookupParameter('Диаметр').AsValueString()
@@ -67,9 +58,7 @@ def bracing_curves_v2(collection):
                 element.LookupParameter('Количество креплений').Set(long*kg)
         except Exception:
             pass
-            
 
-        
 def bracing_pipes(collection):
     try:
         for element in collection:
@@ -100,20 +89,61 @@ def bracing_pipes(collection):
                 kg = 1.48
             else:
                 kg = 1.76
-            
             if element.LookupParameter('Количество креплений'):
                 element.LookupParameter('Количество креплений').Set(long*kg)
     except Exception:
         pass
 
-t = Transaction(doc, 'Обновление общей спеки')
+with revit.Transaction("Обновление общей спеки"):
+    bracing_curves_v2(colCurves)
+    bracing_pipes(colPipes)
+    ADSK_System_Names = []
+    System_Named = True
 
-t.Start()
-            
+    for element in colPipes:
+        if element.LookupParameter('ADSK_Имя системы').AsString() == None:
+            System_Named = False
+            continue
+        if element.LookupParameter('ADSK_Имя системы').AsString() not in ADSK_System_Names:
+            ADSK_System_Names.append(element.LookupParameter('ADSK_Имя системы').AsString())
 
+    if System_Named == False:
+        print 'Есть элементы у которых не заполнен параметр ADSK_Имя системы, для них не произведен расчет'
 
-bracing_curves_v2(colCurves)
-bracing_pipes(colPipeCurves)
+    #при каждом повторе расчета удаляем старые версии
+    for element in colModel:
+        if element.LookupParameter('Семейство').AsValueString() == '_Заглушка для спецификаций':
+            doc.Delete(element.Id)
 
+    #в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
+    # create a filtered element collector set to Category OST_Mass and Class FamilySymbol
+    collector = FilteredElementCollector(doc)
+    collector.OfCategory(BuiltInCategory.OST_GenericModel)
+    collector.OfClass(FamilySymbol)
+    famtypeitr = collector.GetElementIdIterator()
+    famtypeitr.Reset()
+    loc = XYZ(0, 0, 0)
+    for element in famtypeitr:
+        famtypeID = element
+        famsymb = doc.GetElement(famtypeID)
+        if famsymb.Family.Name == '_Заглушка для спецификаций':
+            temporary = famsymb
 
-t.Commit()
+    for system in ADSK_System_Names:
+        familyInst = doc.Create.NewFamilyInstance(loc, temporary, Structure.StructuralType.NonStructural)
+
+    colModel = make_col(BuiltInCategory.OST_GenericModel)
+
+    Models = []
+    for element in colModel:
+        if element.LookupParameter('Семейство').AsValueString() == '_Заглушка для спецификаций':
+            Models.append(element)
+
+    for system in ADSK_System_Names:
+        element = Models[0]
+        element.LookupParameter('ADSK_Имя системы').Set(system)
+        element.LookupParameter('ФОП_ВИС_Группирование').Set('7. Материалы креплений')
+        element.LookupParameter('ФОП_ВИС_Наименование комбинированное').Set('Шпилька, резьба M8, оцинкованная')
+        element.LookupParameter('ADSK_Завод-изготовитель').Set('Сантехкомплект')
+        element.LookupParameter('ФОП_ВИС_Число').Set(20)
+        Models.pop(0)
