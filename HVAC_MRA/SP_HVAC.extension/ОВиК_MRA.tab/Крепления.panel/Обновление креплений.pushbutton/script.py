@@ -46,31 +46,33 @@ colCurves = make_col(BuiltInCategory.OST_DuctCurves)
 def bracing_curves_v2(collection):
     for element in collection:
 
-        print 1
-        if element.LookupParameter('Диаметр'):
-            dy = element.LookupParameter('Диаметр').AsValueString()
-        if element.LookupParameter('Эквивалентный диаметр'):
-            dy = element.LookupParameter('Эквивалентный диаметр').AsValueString()
-            dy = float(dy)
-        if element.LookupParameter('Площадь'):
-            long = element.LookupParameter('Площадь').AsDouble()
-            long = float(long) * 0.0928886438809261
+        try:
+            if element.LookupParameter('Диаметр'):
+                dy = element.LookupParameter('Диаметр').AsValueString()
+            if element.LookupParameter('Эквивалентный диаметр'):
+                dy = element.LookupParameter('Эквивалентный диаметр').AsValueString()
+                dy = float(dy)
+            if element.LookupParameter('Площадь'):
+                long = element.LookupParameter('Площадь').AsDouble()
+                long = float(long) * 0.0928886438809261
+                
+            if dy < 251:
+                kg = 0.712
+            elif dy < 561:
+                kg = 1.22
+            else:
+                kg = 2.55
             
-        if dy < 251:
-            kg = 0.712
-        elif dy < 561:
-            kg = 1.22
-        else:
-            kg = 2.55
-        
-        if element.LookupParameter('Количество креплений'):
-            element.LookupParameter('Количество креплений').Set(long*kg)
+            if element.LookupParameter('Количество креплений'):
+                element.LookupParameter('Количество креплений').Set(long*kg)
+        except Exception:
+            pass
             
 
         
 def bracing_pipes(collection):
-    for element in collection:
-        try:
+    try:
+        for element in collection:
             if element.LookupParameter('Диаметр'):
                 dy = element.LookupParameter('Диаметр').AsDouble() * 304.8
             if element.LookupParameter('Площадь'):
@@ -101,17 +103,15 @@ def bracing_pipes(collection):
             
             if element.LookupParameter('Количество креплений'):
                 element.LookupParameter('Количество креплений').Set(long*kg)
+    except Exception:
+        pass
 
 t = Transaction(doc, 'Обновление общей спеки')
 
 t.Start()
             
 
-            
-        except Exception:
-            pass            
 
-print 12342
 bracing_curves_v2(colCurves)
 bracing_pipes(colPipeCurves)
 
