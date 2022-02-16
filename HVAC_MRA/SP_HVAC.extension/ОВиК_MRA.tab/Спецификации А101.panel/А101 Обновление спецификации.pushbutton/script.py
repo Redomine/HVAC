@@ -192,9 +192,7 @@ def duct_thickness(element):
     return thickness
 
 def make_new_name(collection):
-    
     for element in collection:
-
         Spec_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное')
         if element.LookupParameter('ADSK_Наименование'):
             ADSK_Name = element.LookupParameter('ADSK_Наименование').AsString()
