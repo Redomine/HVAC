@@ -12,27 +12,36 @@ clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neut
 
 import sys
 import System
-import WriteLog
 
 from Autodesk.Revit.DB import *
 from Autodesk.Revit.UI import TaskDialog
 from Autodesk.Revit.UI.Selection import ObjectType
-from rpw.ui.forms import CommandLink, TaskDialog
-from rpw.ui.forms import select_file
-from rpw.ui.forms import TextInput
-from rpw.ui.forms import SelectFromList
-from rpw.ui.forms import Alert
 from System.Collections.Generic import List
-from rpw.ui.forms import SelectFromList
-import System.Drawing
-import System.Windows.Forms
-from System.Drawing import *
-from System.Windows.Forms import *
 from System import Guid
+from pyrevit import revit
+
+
+# from Microsoft.Office.Interop import Excel
+# from System.Runtime.InteropServices import Marshal
+# from rpw.ui.forms import select_file
+# from rpw.ui.forms import TextInput
+# from rpw.ui.forms import SelectFromList
+# from rpw.ui.forms import Alert
+#
+#
+# exel = Excel.ApplicationClass()
+#
+# filepath = select_file()
+#
+# try:
+#     workbook = exel.Workbooks.Open(filepath)
+# except Exception:
+#     Alert('Файл не найден!', title= 'Ошибка', header = 'Неверный ввод')
+#     sys.exit()
+# sheet_name = TextInput('Введите имя листа с данными', default='Лист1')
+#
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
-
-
 
 def make_col(category):
     col = FilteredElementCollector(doc)\
@@ -41,226 +50,154 @@ def make_col(category):
                             .ToElements()
     return col 
     
-colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
+colPipes = make_col(BuiltInCategory.OST_PipeCurves)
 colCurves = make_col(BuiltInCategory.OST_DuctCurves)
+colModel = make_col(BuiltInCategory.OST_GenericModel)
+# create a filtered element collector set to Category OST_Mass and Class FamilySymbol
+collector = FilteredElementCollector(doc)
+collector.OfCategory(BuiltInCategory.OST_GenericModel)
+collector.OfClass(FamilySymbol)
+famtypeitr = collector.GetElementIdIterator()
+famtypeitr.Reset()
+loc = XYZ(0, 0, 0)
 
+Names = ['Шпилька, резьба M8, оцинкованная']
 
-t = Transaction(doc, 'Обновление общей спеки')
+for element in colPipes:
+    if str(element.Name) == 'Тр_Труба_Стальная Оцинкованная_Грувлок':
+        new_name = 'Хомута под грувлок на трубу наружным диаметром ' + str(element.LookupParameter('Внешний диаметр').AsDouble() * 304.8)
+        if new_name not in Names:
+            Names.append(new_name)
 
-t.Start()
+for element in famtypeitr:
+    famtypeID = element
+    famsymb = doc.GetElement(famtypeID)
+    if famsymb.Family.Name == '_Заглушка для спецификаций':
+        temporary = famsymb
 
-def duct_thickness(collection):
-
-    try:
-        for element in collection:
-            if element.LookupParameter('Диаметр'):
-                Size = element.LookupParameter('Диаметр').AsValueString()
-                Size = float(Size)
-                
-                if element.LookupParameter('ИОС_Толщина воздуховода').AsString() == '1.0':
-                    continue
-                if Size < 201:
-                    thickness = '0.5'
-                elif Size < 451:
-                    thickness = '0.6'
-                elif Size < 801:
-                    thickness = '0.7'
-                elif Size < 1251:
-                    thickness = '1.0'
-                elif Size < 1601:
-                    thickness = '1.2'
-                else:
-                    thickness = '1.4'
-                    
-            if element.LookupParameter('Ширина'):
-                SizeA = float(element.LookupParameter('Ширина').AsValueString())
-                SizeB = float(element.LookupParameter('Высота').AsValueString())
-                if SizeA > SizeB:
-                    SizeC = SizeA
-                else:
-                    SizeC = SizeB
-                    
-                if element.LookupParameter('ИОС_Толщина воздуховода').AsString() == '1.0':
-                    continue
-                
-                if SizeC < 251:
-                    thickness = '0.5'
-                elif SizeC < 1001:
-                    thickness = '0.7'
-                elif SizeC < 2001:
-                    thickness = '0.9'
-                else:
-                    thickness = '1.4'
-                
-                    
-            if element.LookupParameter('ИОС_Толщина воздуховода'):
-                duct_thickness = element.LookupParameter('ИОС_Толщина воздуховода')
-                duct_thickness.Set(thickness)  
-            
-    except Exception:
-        pass   
-
-
-def make_new_name(collection, status, mark):
-    SelectedLink  = __revit__.ActiveUIDocument.Document
+def bracing_curves_v2(collection):
     for element in collection:
         try:
-            if status != '+':       
-                Spec_Name = element.LookupParameter('ИОС_Наименование')
-                if element.LookupParameter('О_Наименование'):
-                    O_Name = element.LookupParameter('О_Наименование').AsString()
-                else:
-                    ElemTypeId = element.GetTypeId()
-                    ElemType = SelectedLink.GetElement(ElemTypeId)
-                    O_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
-                New_Name = O_Name  
-                Spec_Name.Set(New_Name)
-            else:
-                if element.LookupParameter('ИОС_Размер'):
-                    Size = element.LookupParameter('ИОС_Размер').AsString()
-                Spec_Name = element.LookupParameter('ИОС_Наименование')
-                if element.LookupParameter('О_Наименование'):
-                    Old_Name = element.LookupParameter('О_Наименование').AsString()
-                    New_Name = Old_Name + ' ' + Size  
-                else:
-                    ElemTypeId = element.GetTypeId()
-                    ElemType = SelectedLink.GetElement(ElemTypeId)
-                    O_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
-                    
-                    if element.LookupParameter('ИОС_Позиция в спецификации').AsString() == '4. Трубопроводы':
-                        Dy = element.LookupParameter('Размер').AsString()
-                        Dy = Dy[1:]
-                        New_Name = O_Name + ' ' + 'Ду='+ Dy + ' (Днар. х т.с. ' + Size + ')'
-                    else:
-                        New_Name = O_Name + ' ' + Size
-
-                if element.LookupParameter('ИОС_Толщина воздуховода'):
-                    duct_thickness = element.LookupParameter('ИОС_Толщина воздуховода').AsString()
-                    New_Name = New_Name + ' толщиной ' + duct_thickness + ' мм'
-                Spec_Name.Set(New_Name)
-                
-            if element.LookupParameter('О_Марка'):
-                O_Mark = element.LookupParameter('О_Марка').AsString()
-            else:
-                ElemTypeId = element.GetTypeId()
-                ElemType = SelectedLink.GetElement(ElemTypeId)
-                O_Mark = ElemType.get_Parameter(Guid('2204049c-d557-4dfc-8d70-13f19715e46d')).AsString()
-            
-            if O_Mark != None and O_Mark != "" and mark == "+" and O_Mark != "-":
-                Mark_Name = element.LookupParameter('ИОС_Наименование').AsString() + " " + "(" + O_Mark +")"
-                Spec_Name.Set(Mark_Name)
-        except Exception:
-            pass    
-
-    
-    
-def common_param(element):
-    
-
-
-    Size = ''
-              
-    if element.LookupParameter('Внешний диаметр'):
-        outer_size = element.LookupParameter('Внешний диаметр').AsDouble() * 304.8
-        interior_size = element.LookupParameter('Внутренний диаметр').AsDouble() * 304.8
-        thickness = (float(outer_size) - float(interior_size))/2
-        outer_size = str(outer_size)
-        
-        a = outer_size.split('.') #убираем 0 после запятой в наружном диаметре если он не имеет значения
-        if a[1] == '0':
-            outer_size = outer_size.replace(".0","")
-        Size = "Ø" + outer_size + "x" + str(thickness)
-        Spec_Size = element.LookupParameter('ИОС_Размер')
-        Spec_Size.Set(Size)
-    elif element.LookupParameter('Размер'):
-        Size = element.LookupParameter('Размер').AsString()
-        Spec_Size = element.LookupParameter('ИОС_Размер')
-        Spec_Size.Set(Size)
-        
-    elif element.LookupParameter('Диаметр'):
-        Size = element.LookupParameter('Диаметр').AsValueString()
-        Spec_Size = element.LookupParameter('ИОС_Размер')
-        Spec_Size.Set(Size)
-            
-    elif element.LookupParameter('Размер трубы'):
-        Size = element.LookupParameter('Размер трубы').AsString()
-        Spec_Size = element.LookupParameter('ИОС_Размер')
-        Spec_Size.Set(Size)
-        
-        #if element.LookupParameter('ИОС_Размер'):
-        #    Spec_Size = element.LookupParameter('ИОС_Размер')
-        #    Spec_Size.Set(Size)
-    
-    if element.LookupParameter('ИОС_Позиция в спецификации').AsString() == '3. Воздухораспределители':
-        Spec_Size.Set('-')
-    
-    if element.LookupParameter('ИОС_Позиция в спецификации').AsString() == '2. Арматура':
-        Spec_Size.Set('-')
-    
-    if element.LookupParameter('ИОС_Позиция в спецификации').AsString() == '2. Трубопроводная арматура':
-        Spec_Size.Set('-') 
-        
-
-def bracing_curves(collection):
-    for element in collection:
-        try:
-            ed_izm = element.LookupParameter('ВТБн_Единицы измерения креплений1')
-            ed_izm.Set('кг.')
             if element.LookupParameter('Диаметр'):
                 dy = element.LookupParameter('Диаметр').AsValueString()
             if element.LookupParameter('Эквивалентный диаметр'):
                 dy = element.LookupParameter('Эквивалентный диаметр').AsValueString()
-            if element.LookupParameter('Длина'):
-                long = element.LookupParameter('Длина').AsValueString()
+                dy = float(dy)
+            if element.LookupParameter('Площадь'):
+                long = element.LookupParameter('Площадь').AsDouble()
+                long = float(long) * 0.0928886438809261
                 
-            if dy < 159:
-                kg = 0.33
-            elif dy < 314:
-                kg = 0.75
-            elif dy < 499:
-                kg = 1.8
-            elif dy < 709:
-                kg = 4
-            elif dy < 899:
-                kg = 6.5
+            if dy < 251:
+                kg = 0.712
+            elif dy < 561:
+                kg = 1.22
             else:
-                kg = 8.8
+                kg = 2.55
+            
+            if element.LookupParameter('Количество креплений'):
+                element.LookupParameter('Количество креплений').Set(long*kg)
         except Exception:
             pass
-            
+
 def bracing_pipes(collection):
-    for element in collection:
-        try:
-            ed_izm = element.LookupParameter('ВТБн_Единицы измерения креплений1')
-            ed_izm.Set('кг.')
-            
+    try:
+        for element in collection:
             if element.LookupParameter('Диаметр'):
-                dy = element.LookupParameter('Диаметр').AsValueString()
-            if element.LookupParameter('Длина'):
-                long = element.LookupParameter('Длина').AsValueString()
+                dy = element.LookupParameter('Диаметр').AsDouble() * 304.8
+            if element.LookupParameter('Площадь'):
+                long = (element.LookupParameter('Длина').AsDouble() * 304.8)/1000
 
-
-            if dy < 159:
-                kg = 0.33
-            elif dy < 314:
-                kg = 0.75
-            elif dy < 499:
-                kg = 1.8
-            elif dy < 709:
-                kg = 4
-            elif dy < 899:
-                kg = 6.5
+            if dy < 16:
+                kg = 0.72
+            elif dy < 21:
+                kg = 0.55
+            elif dy < 26:
+                kg = 0.625
+            elif dy < 33:
+                kg = 0.7
+            elif dy < 41:
+                kg = 0.72
+            elif dy < 51:
+                kg = 0.81
+            elif dy < 71:
+                kg = 0.85
+            elif dy < 81:
+                kg = 1.07
+            elif dy < 101:
+                kg = 1.33
+            elif dy < 126:
+                kg = 1.48
             else:
-                kg = 8.8
-        except Exception:
-            pass      
-        
+                kg = 1.76
+            if element.LookupParameter('Количество креплений'):
+                element.LookupParameter('Количество креплений').Set(long*kg)
+    except Exception:
+        pass
+
+def getLenght(Type_Name, System_Name):
+    lenght = 0
+    for element in colPipes:
+        if str(element.Name) == Type_Name and element.LookupParameter('ADSK_Имя системы').AsString() == System_Name:
+            lenght = lenght + (element.LookupParameter('Длина').AsDouble() * 304.8)/1000
+    return lenght
+
+def new_position():
+    #создаем заглушки по количеству систем, для каждой из которых по заглушке на расчетный параметр
+    for system in ADSK_System_Names:
+        for name in Names:
+            familyInst = doc.Create.NewFamilyInstance(loc, temporary, Structure.StructuralType.NonStructural)
+
+    colModel = make_col(BuiltInCategory.OST_GenericModel)
+    Models = []
+    for element in colModel:
+        if element.LookupParameter('Семейство').AsValueString() == '_Заглушка для спецификаций':
+            Models.append(element)
+
+    for system in ADSK_System_Names:
+        for name in Names:
+            if name == 'Хомута под грувлок':
+                gruvlock_lenght = getLenght('Тр_Труба_Стальная Оцинкованная_Грувлок', system)
+                Number = round((gruvlock_lenght / 2), 0)
+                Maker = 'Сантехкомплект'
+            if name == 'Шпилька, резьба M8, оцинкованная':
+                Number = 20
+                Maker = 'Сантехкомплект'
+            element = Models[0]
+            element.LookupParameter('ADSK_Имя системы').Set(system)
+            element.LookupParameter('ФОП_ВИС_Группирование').Set('7. Материалы креплений')
+            element.LookupParameter('ФОП_ВИС_Наименование комбинированное').Set(name)
+            element.LookupParameter('ADSK_Завод-изготовитель').Set(Maker)
+            element.LookupParameter('ФОП_ВИС_Число').Set(Number)
+            Models.pop(0)
+
+ADSK_System_Names = []
+System_Named = True
+
+for element in colPipes:
+    if element.LookupParameter('ADSK_Имя системы').AsString() == None:
+        System_Named = False
+        continue
+    if element.LookupParameter('ADSK_Имя системы').AsString() not in ADSK_System_Names:
+        ADSK_System_Names.append(element.LookupParameter('ADSK_Имя системы').AsString())
+
+if System_Named == False:
+    print 'Есть элементы труб у которых не заполнен параметр ADSK_Имя системы, для них не произведен расчет'
 
 
-bracing_curves(colCurves)
+with revit.Transaction("Обновление общей спеки"):
+    bracing_curves_v2(colCurves)
+    bracing_pipes(colPipes)
+
+
+    #при каждом повторе расчета удаляем старые версии
+    for element in colModel:
+        if element.LookupParameter('Семейство').AsValueString() == '_Заглушка для спецификаций':
+            doc.Delete(element.Id)
+
+    # в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
+    new_position()
 
 
 
-t.Commit()
 
-#WriteLog.SetLogFile("Распределение по рабочим наборам", doc)
+

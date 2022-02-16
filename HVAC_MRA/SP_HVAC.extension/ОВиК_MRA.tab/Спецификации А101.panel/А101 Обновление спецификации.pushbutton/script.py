@@ -233,8 +233,6 @@ def make_new_name(collection):
                     New_Name = ADSK_Name + ' внутренним диаметром Ø' + str(d)
 
         if element.LookupParameter('ФОП_ВИС_Группирование').AsString() == '5. Фасонные детали воздуховодов':
-            
-            
 
             New_Name = ADSK_Name + ' ' + element.LookupParameter('Размер').AsString()
             if str(element.MEPModel.PartType) == 'Elbow' or str(element.MEPModel.PartType) == 'Transition' or str(element.MEPModel.PartType) == 'Tee':
@@ -242,6 +240,13 @@ def make_new_name(collection):
                 New_Name = ADSK_Name + ' ' + element.LookupParameter('Размер').AsString() + ' толщиной ' + thickness + ' мм'
 
         Spec_Name.Set(New_Name)
+
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+        ADSK_Izm = ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d')).AsString()
+        if ADSK_Izm != None:
+            element.LookupParameter('ФОП_ВИС_Единица измерения').Set(ADSK_Izm)
+
 
 def getConnectors(element):
     connectors = []
