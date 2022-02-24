@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__title__ = 'Импорт ведомости элементов'
+__title__ = 'Импорт ведомости \n элементов'
 __doc__ = "Генерирует в модели элементы в соответствии с их ведомостью"
 
 
@@ -54,12 +54,19 @@ famtypeitr.Reset()
 
 
 
-
+is_temporary_in = False
 for element in famtypeitr:
     famtypeID = element
     famsymb = doc.GetElement(famtypeID)
+
     if famsymb.Family.Name == '_Заглушка для спецификаций':
         temporary = famsymb
+        is_temporary_in = True
+
+if is_temporary_in == False:
+    print 'Не обнаружено семейство-заглушка для спецификаций, проверьте не менялось ли его имя или загружалось ли оно'
+    sys.exit()
+
 
 def setElement(element, name, setting):
     if setting == None:
@@ -102,7 +109,6 @@ System_Named = True
 try:
     workbook = exel.Workbooks.Open(filepath)
 except Exception:
-    Alert('Файл не найден!', title= 'Ошибка', header = 'Неверный ввод')
     sys.exit()
 sheet_name = 'Импорт'
 
@@ -129,7 +135,6 @@ with revit.Transaction("Добавление расчетных элементо
             doc.Delete(element.Id)
 
     calculation_elements = []
-
     row = 2
     while True:
         if xlrange.value2[row, FOP_Name] == None:
@@ -142,12 +147,13 @@ with revit.Transaction("Добавление расчетных элементо
         Number = xlrange.value2[row, FOP_Number]
         row += 1
         calculation_elements.append([System, Group, Name, Maker, Izm, Number])
-        # в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
+
 
     for phase in doc.Phases:
         if phase.Name == 'Спецификация':
             phaseid = phase.Id
 
+    # в следующем блоке генерируем новые экземпляры пустых семейств куда уйдут расчеты
     new_position(calculation_elements)
 
 

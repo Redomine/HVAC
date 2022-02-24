@@ -191,6 +191,7 @@ def duct_thickness(element):
 
     return thickness
 
+errors_list = []
 def make_new_name(collection):
     for element in collection:
         Spec_Name = element.LookupParameter('ФОП_ВИС_Наименование комбинированное')
@@ -202,8 +203,9 @@ def make_new_name(collection):
             ADSK_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
 
         if ADSK_Name == None:
-            print 'Для категории не заполнен параметр ADSK_Наименование'
-            print element.LookupParameter('ФОП_ВИС_Группирование').AsString()
+            error = 'Для категории не заполнен параметр ADSK_Наименование ' + element.LookupParameter('ФОП_ВИС_Группирование').AsString()
+            if error not in errors_list:
+                errors_list.append(error)
             continue
 
         New_Name = ADSK_Name
@@ -398,7 +400,6 @@ def getDependent(collection):
                 Pos.Set(group)
 
 with revit.Transaction("Обновление общей спеки"):
-
     getNumericalParam(colEquipment, '1. Оборудование')
     getNumericalParam(colAccessory, '2. Арматура')
     getNumericalParam(colTerminals, '3. Воздухораспределители')
@@ -413,8 +414,6 @@ with revit.Transaction("Обновление общей спеки"):
     getCapacityParam(colPipeInsulations, '6. Материалы трубопроводной изоляции')
     getCapacityParam(colInsulations, '6. Материалы изоляции воздуховодов')
 
-
-
     make_new_name(colEquipment)
     make_new_name(colAccessory)
     make_new_name(colTerminals)
@@ -427,6 +426,10 @@ with revit.Transaction("Обновление общей спеки"):
     make_new_name(colPipeFittings)
     make_new_name(colPipeInsulations)
     make_new_name(colInsulations)
+
+    if len(errors_list) > 0:
+        for error in errors_list:
+            print error
 
     if sort_dependent_by_equipment == True:
         getDependent(colEquipment)
