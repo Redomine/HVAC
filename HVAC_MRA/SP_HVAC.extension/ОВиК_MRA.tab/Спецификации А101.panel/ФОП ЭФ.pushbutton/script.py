@@ -12,26 +12,13 @@ clr.AddReference("RevitAPIUI")
 clr.AddReference('Microsoft.Office.Interop.Excel, Version=11.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c')
 
 import sys
-import System
-import math
 from Autodesk.Revit.DB import *
-from Autodesk.Revit.UI import TaskDialog
-from Autodesk.Revit.UI.Selection import ObjectType
-from System.Collections.Generic import List
-from rpw.ui.forms import SelectFromList
 from System import Guid
-from itertools import groupby
-
 from pyrevit import revit
-from pyrevit import forms
-from pyrevit import script
-from pyrevit.forms import Reactive, reactive
-from pyrevit.revit import selection, Transaction
+
 
 doc = __revit__.ActiveUIDocument.Document  # type: Document
 view = doc.ActiveView
-
-
 
 
 def make_col(category):
@@ -65,9 +52,7 @@ colPipeSystems = make_col(BuiltInCategory.OST_PipingSystem)
 
 def getEFsystem(element):
     sys_name = element.LookupParameter('Имя системы').AsString()
-
     EF = None
-
     if sys_name != None:
         if element in colEquipment:
             sys_name = element.LookupParameter('Имя системы').AsString()
@@ -81,9 +66,6 @@ def getEFsystem(element):
 
     if EF == None:
         EF = doc.ProjectInformation.LookupParameter('ФОП_Экономическая функция').AsString()
-
-
-
     return EF
 
 def copyEF(collection):
@@ -92,6 +74,26 @@ def copyEF(collection):
         if EF != None:
             element.LookupParameter('ФОП_Экономическая функция').Set(EF)
 
+def getDependent(collection):
+    for element in collection:
+        EF = element.LookupParameter('ФОП_Экономическая функция').AsString()
+        dependent = element.GetSubComponentIds()
+
+        for depend in dependent:
+            depend.LookupParameter('ФОП_Экономическая функция').Set(EF)
+
+def getSystemDict(collection):
+    Dict = {}
+    for system in collection:
+        if system.Name not in Dict:
+            EF = system.LookupParameter('ФОП_Экономическая функция').AsString()
+            ElemTypeId = system.GetTypeId()
+            ElemType = doc.GetElement(ElemTypeId)
+            if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')):
+                if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')) != None:
+                    EF = ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')).AsString()
+            Dict[system.Name] = EF
+    return Dict
 
 try:
     if doc.ProjectInformation.LookupParameter('ФОП_Экономическая функция').AsString() == None:
@@ -101,32 +103,10 @@ except Exception:
     print 'Не найден параметр ФОП_Экономическая функция'
     sys.exit()
 
-ductDict = {}
-for system in colDuctSystems:
-    if system.Name not in ductDict:
-        EF = system.LookupParameter('ФОП_Экономическая функция').AsString()
-        ductDict[system.Name] = EF
+ductDict = getSystemDict(colDuctSystems)
 
+pipeDict = getSystemDict(colPipeSystems)
 
-pipeDict = {}
-for system in colPipeSystems:
-    if system.Name not in pipeDict:
-        EF = system.LookupParameter('ФОП_Экономическая функция').AsString()
-        ElemTypeId = system.GetTypeId()
-        ElemType = doc.GetElement(ElemTypeId)
-        if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')):
-            if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')) != None:
-                EF = ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')).AsString()
-        pipeDict[system.Name] = EF
-
-
-def getDependent(collection):
-    for element in collection:
-        EF = element.LookupParameter('ФОП_Экономическая функция').AsString()
-        dependent = element.GetSubComponentIds()
-
-        for depend in dependent:
-            depend.LookupParameter('ФОП_Экономическая функция').Set(EF)
 
 with revit.Transaction("Обновление общей спеки"):
     for collection in collections:
