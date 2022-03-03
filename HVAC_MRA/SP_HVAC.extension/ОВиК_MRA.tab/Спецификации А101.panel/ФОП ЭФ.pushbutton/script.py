@@ -72,7 +72,16 @@ def copyEF(collection):
     for element in collection:
         EF = getEFsystem(element)
         if EF != None:
+            ElemTypeId = element.GetTypeId()
+            ElemType = doc.GetElement(ElemTypeId)
+            if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')):
+                if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')).AsString() != None:
+                    if ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')) != "":
+                        EF = ElemType.get_Parameter(Guid('23772cae-9eaa-4f96-99ba-b65a7f44f8cf')).AsString()
+
             element.LookupParameter('ФОП_Экономическая функция').Set(EF)
+
+
 
 def getDependent(collection):
     for element in collection:

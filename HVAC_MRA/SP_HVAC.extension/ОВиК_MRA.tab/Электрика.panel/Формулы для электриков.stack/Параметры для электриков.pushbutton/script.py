@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__title__ = 'Добавление параметров \n электриков'
-__doc__ = "Добавление параметров"
+__title__ = 'Добавление параметров'
+__doc__ = "Добавление параметров в семейство для выдачи заданий электрикам"
 
 
 import clr
@@ -50,29 +50,55 @@ spFile = doc.Application.OpenSharedParameterFile()
 set = doc.FamilyManager.Parameters
 
 paraNames = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',
-             'ADSK_Классификация нагрузок', 'ADSK_Не нагреватель', 'ADSK_Номинальная мощность']
+             'ADSK_Классификация нагрузок', 'ADSK_Не нагреватель_Не шкаф', 'ADSK_Номинальная мощность']
 
+notFormula = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз']
+
+
+#проверяем тот ли файл общих параметров подгружен
+spFileName = str(doc.Application.SharedParametersFilename)
+spFileName = spFileName.split('\\')
+spFileName = spFileName[-1]
+if "ФОП_ADSK.txt" != spFileName:
+    print 'Подгружен не тот файл общих параметров, переключитесь на ФОП_ADSK'
+    sys.exit()
 
 
 
 with revit.Transaction("Добавление параметров"):
+    #удаляем формулы на элементах, к которым будут присвоены свои, чтоб избежать конфликтов
+    for param in set:
+        if str(param.Definition.Name) in notFormula:
+            manager.SetFormula(param, "1")
+
+    #проверяем наличие параметров из списка имен в проекте, присваиваем им параметры типа или экземпляра
     for param in set:
         if str(param.Definition.Name) in paraNames:
-            manager.MakeInstance(param)
+            #мощность и напряжение иногда уже проставлены и могут быть любого типа, просто их не трогаю
+            if str(param.Definition.Name) == 'ADSK_Номинальная мощность' or str(param.Definition.Name) == 'ADSK_Напряжение':
+               pass
+            else:
+                manager.MakeInstance(param)
             paraNames.remove(param.Definition.Name)
 
+    #если в списке имен после проверки осталось что-то, добавляем параметры из списка
     if len(paraNames) > 0:
         addedNames = []
         for name in paraNames:
             for dG in spFile.Groups:
                 group = "04 Обязательные ИНЖЕНЕРИЯ"
-                if name == 'ADSK_Не нагреватель':
+                if name == 'ADSK_Не нагреватель_Не шкаф':
                     group = "08 Необязательные ИНЖЕНЕРИЯ"
                 if str(dG.Name) == group:
                     myDefinitions = dG.Definitions
                     eDef = myDefinitions.get_Item(name)
-                    manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)
+                    if name == 'ADSK_Номинальная мощность' or name == 'ADSK_Напряжение' or name == 'ADSK_Не нагреватель_Не шкаф':
+                        manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, False)
+                    else:
+                        manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)
                     addedNames.append(name)
+
+        #если все равно что-то осталось, сообщаем каких параметров не нашлось, но это вряд ли произойдет
         for name in addedNames:
             if name in paraNames:
                 paraNames.remove(name)

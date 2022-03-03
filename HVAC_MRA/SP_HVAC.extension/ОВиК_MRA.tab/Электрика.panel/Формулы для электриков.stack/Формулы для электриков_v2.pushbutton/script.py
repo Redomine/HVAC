@@ -50,7 +50,7 @@ spFile = doc.Application.OpenSharedParameterFile()
 set = doc.FamilyManager.Parameters
 
 paraNames = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',
-             'ADSK_Классификация нагрузок', 'ADSK_Не нагреватель', 'ADSK_Номинальная мощность']
+             'ADSK_Классификация нагрузок', 'ADSK_Не нагреватель_Не шкаф', 'ADSK_Номинальная мощность']
 
 for param in set:
     if str(param.Definition.Name) in paraNames:
@@ -87,10 +87,11 @@ with revit.Transaction("Добавление формул"):
 
         if str(param.Definition.Name) == 'ADSK_Коэффициент мощности':
             ADSK_K = param
-            manager.SetFormula(param, "if(ADSK_Не нагреватель, if(ADSK_Номинальная мощность < 1000 Вт, 0.65, if(ADSK_Номинальная мощность < 4000 Вт, 0.75, 0.85)), 1)")
+            manager.SetFormula(param, "if(ADSK_Не нагреватель_Не шкаф, if(ADSK_Номинальная мощность < 1000 Вт, 0.65, if(ADSK_Номинальная мощность < 4000 Вт, 0.75, 0.85)), 1)")
         if str(param.Definition.Name) == 'ADSK_Полная мощность':
-            ADSK_power = param
             manager.SetFormula(param, "ADSK_Номинальная мощность / ADSK_Коэффициент мощности")
+        if str(param.Definition.Name) == 'ADSK_Номинальная мощность':
+            ADSK_power = param
 
     for connector in connectorCol:
         params = connector.GetOrderedParameters()
