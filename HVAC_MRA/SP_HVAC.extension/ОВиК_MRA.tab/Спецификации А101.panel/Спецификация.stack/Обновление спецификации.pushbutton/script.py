@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__title__ = 'Обновление общей \n спецификации'
+__title__ = 'Обновление спецификации'
 __doc__ = "Обновляет число подсчетных элементов"
 
 import os.path as op
@@ -67,6 +67,8 @@ colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
 colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
 colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
 colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
+
+
 
 def getNumber(Number1, Number2):
     if Number1 > Number2:
@@ -398,6 +400,24 @@ def getDependent(collection):
             if dep.LookupParameter('ФОП_ВИС_Группирование'):
                 Pos = dep.LookupParameter('ФОП_ВИС_Группирование')
                 Pos.Set(group)
+
+paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
+             'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число']
+
+#проверка на наличие нужных параметров
+map = doc.ParameterBindings
+it = map.ForwardIterator()
+while it.MoveNext():
+    newProjectParameterData = it.Key.Name
+    if str(newProjectParameterData) in paraNames:
+        paraNames.remove(str(newProjectParameterData))
+if len(paraNames) > 0:
+    print 'Необходимо добавить параметры экземпляра'
+    for name in paraNames:
+        print name
+    sys.exit()
+
+
 
 with revit.Transaction("Обновление общей спеки"):
     getNumericalParam(colEquipment, '1. Оборудование')

@@ -28,6 +28,9 @@ def make_col(category):
                             .ToElements()
     return col
 
+
+
+
 colFittings = make_col(BuiltInCategory.OST_DuctFitting)
 colPipeFittings = make_col(BuiltInCategory.OST_PipeFitting)
 colPipeCurves = make_col(BuiltInCategory.OST_PipeCurves)
@@ -40,9 +43,10 @@ colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
 colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
 colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
 colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
+colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
 
 collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
-               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves]
+               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures]
 
 
 colDuctSystems = make_col(BuiltInCategory.OST_DuctSystem)
@@ -107,6 +111,23 @@ def getSystemDict(collection):
                     EF = system.LookupParameter('ФОП_Экономическая функция').AsString()
             Dict[system.Name] = EF
     return Dict
+
+
+paraNames = ['ФОП_Экономическая функция', 'ФОП_ВИС_Экономическая функция']
+#проверка на наличие нужных параметров
+map = doc.ParameterBindings
+it = map.ForwardIterator()
+while it.MoveNext():
+    newProjectParameterData = it.Key.Name
+    if str(newProjectParameterData) in paraNames:
+        paraNames.remove(str(newProjectParameterData))
+if len(paraNames) > 0:
+    print 'Необходимо добавить параметры'
+    for name in paraNames:
+        print name
+    sys.exit()
+
+
 
 try:
     if doc.ProjectInformation.LookupParameter('ФОП_Экономическая функция').AsString() == None:
