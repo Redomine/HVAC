@@ -44,13 +44,15 @@ colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
 colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
 colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
 colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
+colDuctSystems = make_col(BuiltInCategory.OST_DuctSystem)
+colPipeSystems = make_col(BuiltInCategory.OST_PipingSystem)
+
 
 collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
                colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures]
 
 
-colDuctSystems = make_col(BuiltInCategory.OST_DuctSystem)
-colPipeSystems = make_col(BuiltInCategory.OST_PipingSystem)
+
 
 
 

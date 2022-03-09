@@ -20,6 +20,7 @@ from Autodesk.Revit.DB.ExternalService import *
 from Autodesk.Revit.DB.ExtensibleStorage import *
 from System.Collections.Generic import List
 from System import Guid
+from pyrevit import revit
 
 doc = __revit__.ActiveUIDocument.Document
 view = doc.ActiveView
@@ -36,9 +37,7 @@ def make_col(category):
 colFittings = make_col(BuiltInCategory.OST_DuctFitting)    
 
 
-t = Transaction(doc, 'Пересчет КМС')
 
-t.Start()
 
 def getConnectors(element):
     connectors = []
@@ -104,27 +103,85 @@ def getDpTransition(element):
         dp = 0.146*(v_2 - v_1)**1.9
             
     return dp
-    
+
+
+def getConCoords(connector):
+    a0 = connector.Origin.ToString()
+    a0 = a0.replace("(", "")
+    a0 = a0.replace(")", "")
+    a0 = a0.split(",")
+    for x in a0:
+        x = float(x)
+    return a0
+
+def getTeeOrient(element):
+    a = getConnectors(element)
+    orient = 1
+    #первым делом ищем центр масс треугольника из коннекторов тройника
+    XYZ1 = getConCoords(a[0])
+    XYZ2 = getConCoords(a[1])
+    XYZ3 = getConCoords(a[2])
+
+    print XYZ1
+    xm = (float(XYZ1[0]) + float(XYZ2[0]) + float(XYZ3[0]))/3
+    ym = (float(XYZ1[1]) + float(XYZ2[1]) + float(XYZ3[1]))/3
+    zm = (float(XYZ1[2]) + float(XYZ2[2]) + float(XYZ3[2]))/3
+    XYZm = (xm, ym, zm)
+
+    #вычисляем стартовую точку прямой по максимальному потоку
+    if max(a[0].Flow, a[1].Flow, a[2].Flow) == a[0].Flow:
+        XYZs = getConCoords(a[0])
+    if max(a[0].Flow, a[1].Flow, a[2].Flow) == a[1].Flow:
+        XYZs = getConCoords(a[1])
+    if max(a[0].Flow, a[1].Flow, a[2].Flow) == a[2].Flow:
+        XYZs = getConCoords(a[2])
+
+    #вычисляем конечную точку прямой по минимальному потоку
+    if min(a[0].Flow, a[1].Flow, a[2].Flow) == a[0].Flow:
+        XYZe = getConCoords(a[0])
+    if min(a[0].Flow, a[1].Flow, a[2].Flow) == a[1].Flow:
+        XYZe = getConCoords(a[1])
+    if min(a[0].Flow, a[1].Flow, a[2].Flow) == a[2].Flow:
+        XYZe = getConCoords(a[2])
+
+    #составим уравнение прямой в каноническом виде по трем точкам
+    xa = float(XYZs[0])
+    ya = float(XYZs[1])
+    za = float(XYZs[2])
+
+    xb = float(XYZe[0])
+    yb = float(XYZe[1])
+    zb = float(XYZe[2])
+
+    (xm - xa) / (xb - xa)
+    (ym - ya) / (yb - ya)
+    (zm - za) / (zb - za)
+
+
+    return orient
+
+
 def getDpTee(element):
     a = getConnectors(element)
+
+    getTeeOrient(element)
     dp = 10
-    try:
-        S1 = a1.Height*0.3048*a1.Width*0.3048
-    except:
-        S1 = 3.14*0.3048*0.3048*a1.Radius**2
-    try:
-        S2 = a2.Height*0.3048*a2.Width*0.3048
-    except:
-        S2 = 3.14*0.3048*0.3048*a2.Radius**2
-    try:
-        S3 = a3.Height*0.3048*a3.Width*0.3048
-    except:
-        S3 = 3.14*0.3048*0.3048*a3.Radius**2
-        
-    v1 = a1.Flow*101.94/3600/S1
-    v2 = a2.Flow*101.94/3600/S2
-    v3 = a3.Flow*101.94/3600/S3
-            
+    # try:
+    #     S1 = a[1].Height*0.3048*a[1].Width*0.3048
+    # except:
+    #     S1 = 3.14*0.3048*0.3048*a1.Radius**2
+    # try:
+    #     S2 = a2.Height*0.3048*a2.Width*0.3048
+    # except:
+    #     S2 = 3.14*0.3048*0.3048*a2.Radius**2
+    # try:
+    #     S3 = a3.Height*0.3048*a3.Width*0.3048
+    # except:
+    #     S3 = 3.14*0.3048*0.3048*a3.Radius**2
+    #
+    # v1 = a1.Flow*101.94/3600/S1
+    # v2 = a2.Flow*101.94/3600/S2
+    # v3 = a3.Flow*101.94/3600/S3
     return dp
         
 def getLossMethods(serviceId):
@@ -152,52 +209,43 @@ def getServerById(serverGUID, serviceId):
 
 elems=colFittings
 
-
-for el in elems:
-    try:
+with revit.Transaction("Пересчет потерь напора"):
+    for el in elems:
         dp = 3.3
         if str(el.MEPModel.PartType) == 'Elbow':
             dp = getDpElbow(el)
-            
+
         if str(el.MEPModel.PartType) == 'Transition':
             dp = getDpTransition(el)
-            
+
         if str(el.MEPModel.PartType) == 'Tee':
             dp = getDpTee(el)
-        
+
         eleId = el.Id
         fitting = doc.GetElement(eleId)
         param = fitting.get_Parameter(BuiltInParameter.RBS_DUCT_FITTING_LOSS_METHOD_SERVER_PARAM)
         lc = getLossMethods(ExternalServices.BuiltInExternalServices.DuctFittingAndAccessoryPressureDropService)
         param.Set(lc[9].ToString()) # установка метода потерь
-
         schema = lc[11].GetDataSchema()
         field = schema.GetField("PressureLoss")
         entity=fitting.GetEntity(schema)
-        entity.Set[field.ValueType](field, str(int(math.ceil(dp/3.3))))
-        fitting.SetEntity(entity)
-        
-        
-
-    except Exception:
-        pass
-
-t.Commit()
+        try:
+            entity.Set[field.ValueType](field, str(int(math.ceil(dp/3.3))))
+            fitting.SetEntity(entity)
+        except Exception:
+            pass
 
 
-t_2 = Transaction(doc, 'Выключение систем')
-t_2.Start()
-colSystems = make_col(BuiltInCategory.OST_DuctSystem)
-for el in colSystems:
-    sysType = doc.GetElement(el.GetTypeId())
-    sysType.CalculationLevel = sysType.CalculationLevel.None 
-t_2.Commit()
 
-t_3 = Transaction(doc, 'Включение систем')
-t_3.Start()
-colSystems = make_col(BuiltInCategory.OST_DuctSystem)
-for el in colSystems:
-    sysType = doc.GetElement(el.GetTypeId())
+with revit.Transaction("Выключение систем"):
+    colSystems = make_col(BuiltInCategory.OST_DuctSystem)
+    for el in colSystems:
+        sysType = doc.GetElement(el.GetTypeId())
+        sysType.CalculationLevel = sysType.CalculationLevel.None
 
-    sysType.CalculationLevel = sysType.CalculationLevel.All 
-t_3.Commit()
+with revit.Transaction("Включение систем"):
+    colSystems = make_col(BuiltInCategory.OST_DuctSystem)
+    for el in colSystems:
+        sysType = doc.GetElement(el.GetTypeId())
+        sysType.CalculationLevel = sysType.CalculationLevel.All
+

@@ -67,8 +67,10 @@ colPipeAccessory = make_col(BuiltInCategory.OST_PipeAccessory)
 colEquipment = make_col(BuiltInCategory.OST_MechanicalEquipment)
 colInsulations = make_col(BuiltInCategory.OST_DuctInsulations)
 colPipeInsulations = make_col(BuiltInCategory.OST_PipeInsulations)
+colPlumbingFixtures= make_col(BuiltInCategory.OST_PlumbingFixtures)
 
-
+collections = [colFittings, colPipeFittings, colCurves, colFlexCurves, colFlexPipeCurves, colTerminals, colAccessory,
+               colPipeAccessory, colEquipment, colInsulations, colPipeInsulations, colPipeCurves, colPlumbingFixtures]
 
 def getNumber(Number1, Number2):
     if Number1 > Number2:
@@ -417,10 +419,44 @@ if len(paraNames) > 0:
         print name
     sys.exit()
 
+#проверяем заполненность параметров ADSK_Наименование и ADSK_ед. измерения. Единицы еще сверяем со списком допустимых.
+errors_list = []
+Izm_names = ['м.п.', 'м.', 'мп', 'м', 'м.п', 'шт', 'шт.', 'компл', 'компл.', 'м2', 'к-т']
+for collection in collections:
+    for element in collection:
+        ElemTypeId = element.GetTypeId()
+        ElemType = doc.GetElement(ElemTypeId)
+        if element.LookupParameter('ADSK_Наименование'):
+            ADSK_Name = element.LookupParameter('ADSK_Наименование').AsString()
+        else:
+            ADSK_Name = ElemType.get_Parameter(Guid('e6e0f5cd-3e26-485b-9342-23882b20eb43')).AsString()
+        if ADSK_Name == None:
+            error = 'Для категории ' + str(element.Category.Name) + '  не заполнен параметр ADSK_Наименование, заполните перед дальнейшей работой'
+            if error not in errors_list:
+                errors_list.append(error)
+        if ADSK_Name == '!Не учитывать' or ADSK_Name == '_!Не учитывать':
+            continue
 
+        ADSK_Izm = ElemType.get_Parameter(Guid('4289cb19-9517-45de-9c02-5a74ebf5c86d')).AsString()
+        if ADSK_Izm == None:
+            error = 'Для категории ' + str(element.Category.Name) + '  не заполнен параметр ADSK_Единица измерения, заполните перед дальнейшей работой'
+            if error not in errors_list:
+                errors_list.append(error)
+        else:
+            if ADSK_Izm not in Izm_names:
+
+                error = 'Для категории ' + str(element.Category.Name) + ' у элементов единицы измерения не соответствуют расчетным(м.п., м., мп, м , м.п, шт, шт., к-т, компл, компл., м2)'
+                if error not in errors_list:
+                    errors_list.append(error)
+
+if len(errors_list) > 0:
+    for error in errors_list:
+        print error
+    sys.exit()
 
 with revit.Transaction("Обновление общей спеки"):
     getNumericalParam(colEquipment, '1. Оборудование')
+    getNumericalParam(colPlumbingFixtures, '1. Оборудование')
     getNumericalParam(colAccessory, '2. Арматура')
     getNumericalParam(colTerminals, '3. Воздухораспределители')
     getNumericalParam(colPipeAccessory, '2. Трубопроводная арматура')
@@ -434,18 +470,9 @@ with revit.Transaction("Обновление общей спеки"):
     getCapacityParam(colPipeInsulations, '6. Материалы трубопроводной изоляции')
     getCapacityParam(colInsulations, '6. Материалы изоляции воздуховодов')
 
-    make_new_name(colEquipment)
-    make_new_name(colAccessory)
-    make_new_name(colTerminals)
-    make_new_name(colCurves)
-    make_new_name(colFlexCurves)
-    make_new_name(colFittings)
-    make_new_name(colPipeCurves)
-    make_new_name(colFlexPipeCurves)
-    make_new_name(colPipeAccessory)
-    make_new_name(colPipeFittings)
-    make_new_name(colPipeInsulations)
-    make_new_name(colInsulations)
+    for collection in collections:
+        make_new_name(collection)
+
 
     if len(errors_list) > 0:
         for error in errors_list:

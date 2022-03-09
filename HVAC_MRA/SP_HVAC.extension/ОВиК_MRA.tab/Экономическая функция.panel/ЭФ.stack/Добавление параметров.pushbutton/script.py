@@ -59,10 +59,17 @@ catEquipment = doc.Settings.Categories.get_Item(BuiltInCategory.OST_MechanicalEq
 catInsulations = doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctInsulations)
 catPipeInsulations = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipeInsulations)
 catPlumbingFixtures = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PlumbingFixtures)
+catInformation = doc.Settings.Categories.get_Item(BuiltInCategory.OST_ProjectInformation)
+catDuctSystems = doc.Settings.Categories.get_Item(BuiltInCategory.OST_DuctSystem)
+catPipeSystems = doc.Settings.Categories.get_Item(BuiltInCategory.OST_PipingSystem)
 
 cats = [catFittings, catPipeFittings, catPipeCurves, catCurves, catFlexCurves, catFlexPipeCurves, catTerminals, catAccessory,
-        catPipeAccessory, catEquipment, catInsulations, catPipeInsulations, catPlumbingFixtures]
+        catPipeAccessory, catEquipment, catInsulations, catPipeInsulations, catPlumbingFixtures, catInformation, catPipeSystems,
+        catDuctSystems]
 
+catsType = [catFittings, catPipeFittings, catPipeCurves, catCurves, catFlexCurves, catFlexPipeCurves, catTerminals, catAccessory,
+        catPipeAccessory, catEquipment, catInsulations, catPipeInsulations, catPlumbingFixtures, catPipeSystems,
+        catDuctSystems]
 
 
 #проверка на наличие нужных параметров
@@ -73,13 +80,18 @@ while it.MoveNext():
     if str(newProjectParameterData) in paraNames:
         paraNames.remove(str(newProjectParameterData))
 
+
+
 uiDoc = __revit__.ActiveUIDocument
 sel = uiDoc.Selection
 
 catSet = doc.Application.Create.NewCategorySet()
+catTypeSet = doc.Application.Create.NewCategorySet()
 
 for cat in cats:
     catSet.Insert(cat)
+for cat in catsType:
+    catTypeSet.Insert(cat)
 
 with revit.Transaction("Добавление параметров"):
     if len(paraNames) > 0:
@@ -96,6 +108,6 @@ with revit.Transaction("Добавление параметров"):
                         newIB = doc.Application.Create.NewInstanceBinding(catSet)
                         doc.ParameterBindings.Insert(eDef, newIB)
                     else:
-                        newIB = doc.Application.Create.NewTypeBinding(catSet)
+                        newIB = doc.Application.Create.NewTypeBinding(catTypeSet)
                         doc.ParameterBindings.Insert(eDef, newIB)
 

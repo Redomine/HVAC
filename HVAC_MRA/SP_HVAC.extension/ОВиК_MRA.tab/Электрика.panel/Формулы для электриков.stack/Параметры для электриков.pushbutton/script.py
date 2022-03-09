@@ -40,7 +40,11 @@ loadsCol = make_col(BuiltInCategory.OST_ElectricalLoadClassifications)
 
 t = Transaction(doc, 'Добавление формул')
 
-manager = doc.FamilyManager
+try:
+    manager = doc.FamilyManager
+except Exception:
+    print "Надстройка предназначена для работы с семействами"
+    sys.exit()
 
 def associate(param, famparam):
     manager.AssociateElementParameterToFamilyParameter(param, famparam)
@@ -50,7 +54,7 @@ spFile = doc.Application.OpenSharedParameterFile()
 set = doc.FamilyManager.Parameters
 
 paraNames = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз', 'ADSK_Напряжение',
-             'ADSK_Классификация нагрузок', 'ADSK_Не нагреватель_Не шкаф', 'ADSK_Номинальная мощность']
+             'ADSK_Классификация нагрузок', 'ADSK_Не нагреватель_Не шкаф', 'ADSK_Номинальная мощность', 'ADSK_Без частотного регулятора']
 
 notFormula = ['ADSK_Полная мощность', 'ADSK_Коэффициент мощности', 'ADSK_Количество фаз']
 
@@ -87,12 +91,12 @@ with revit.Transaction("Добавление параметров"):
         for name in paraNames:
             for dG in spFile.Groups:
                 group = "04 Обязательные ИНЖЕНЕРИЯ"
-                if name == 'ADSK_Не нагреватель_Не шкаф':
+                if name == 'ADSK_Не нагреватель_Не шкаф' or name == 'ADSK_Без частотного регулятора':
                     group = "08 Необязательные ИНЖЕНЕРИЯ"
                 if str(dG.Name) == group:
                     myDefinitions = dG.Definitions
                     eDef = myDefinitions.get_Item(name)
-                    if name == 'ADSK_Номинальная мощность' or name == 'ADSK_Напряжение' or name == 'ADSK_Не нагреватель_Не шкаф':
+                    if name == 'ADSK_Номинальная мощность' or name == 'ADSK_Напряжение' or name == 'ADSK_Не нагреватель_Не шкаф' or name == 'ADSK_Без частотного регулятора':
                         manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, False)
                     else:
                         manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)
