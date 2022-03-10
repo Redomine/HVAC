@@ -115,49 +115,58 @@ def getConCoords(connector):
     return a0
 
 def getTeeOrient(element):
-    a = getConnectors(element)
+    connectors = getConnectors(element)
     orient = 1
-    #первым делом ищем центр масс треугольника из коннекторов тройника
-    XYZ1 = getConCoords(a[0])
-    XYZ2 = getConCoords(a[1])
-    XYZ3 = getConCoords(a[2])
+    connector_out = []
+    for connector in connectors:
+        if str(connector.Direction) == "Out":
+            connector_out.append(connector)
 
-    print XYZ1
-    xm = (float(XYZ1[0]) + float(XYZ2[0]) + float(XYZ3[0]))/3
-    ym = (float(XYZ1[1]) + float(XYZ2[1]) + float(XYZ3[1]))/3
-    zm = (float(XYZ1[2]) + float(XYZ2[2]) + float(XYZ3[2]))/3
-    XYZm = (xm, ym, zm)
-
-    #вычисляем стартовую точку прямой по максимальному потоку
-    if max(a[0].Flow, a[1].Flow, a[2].Flow) == a[0].Flow:
-        XYZs = getConCoords(a[0])
-    if max(a[0].Flow, a[1].Flow, a[2].Flow) == a[1].Flow:
-        XYZs = getConCoords(a[1])
-    if max(a[0].Flow, a[1].Flow, a[2].Flow) == a[2].Flow:
-        XYZs = getConCoords(a[2])
-
-    #вычисляем конечную точку прямой по минимальному потоку
-    if min(a[0].Flow, a[1].Flow, a[2].Flow) == a[0].Flow:
-        XYZe = getConCoords(a[0])
-    if min(a[0].Flow, a[1].Flow, a[2].Flow) == a[1].Flow:
-        XYZe = getConCoords(a[1])
-    if min(a[0].Flow, a[1].Flow, a[2].Flow) == a[2].Flow:
-        XYZe = getConCoords(a[2])
-
-    #составим уравнение прямой в каноническом виде по трем точкам
-    xa = float(XYZs[0])
-    ya = float(XYZs[1])
-    za = float(XYZs[2])
-
-    xb = float(XYZe[0])
-    yb = float(XYZe[1])
-    zb = float(XYZe[2])
-
-    (xm - xa) / (xb - xa)
-    (ym - ya) / (yb - ya)
-    (zm - za) / (zb - za)
+        #для входа в тройник ищем координаты начала входящего воздуховода чтоб построить прямую через эти две точки
+        connector_p = []
+        if str(connector.Direction) == "In":
+            inTee = getConCoords(connector)
+            a = connector.AllRefs.ForwardIterator()
+            while a.MoveNext():
+                connector_p.append(a.Current)
+            duct = connector_p[0].Owner
+            duct_connectors = getConnectors(duct)
+            for duct_connector in duct_connectors:
+                if getConCoords(duct_connector) != inTee:
+                    inDuct = getConCoords(duct_connector)
 
 
+    # среди выходящих коннекторов ищем диктующий по большему расходу
+    try:
+        if connector_out[0].Flow > connector_out[1].Flow:
+            connector_o = connector_out[0]
+        else:
+            connector_o = connector_out[1]
+    except Exception:
+        print element.Id
+        print connector_out
+    connector_o = getConCoords(connector_o)
+
+    #найдем вектор по координатам точек AB = {Bx - Ax; By - Ay; Bz - Az}
+    Tee_Duct = [(float(inDuct[0]) - float(inTee[0])), (float(inDuct[1]) - float(inTee[1])), (float(inDuct[2]) - float(inTee[2]))]
+    Tee_Out = [(float(inTee[0]) - float(connector_o[0])), (float(inTee[1]) - float(connector_o[1])), (float(inTee[2]) - float(connector_o[2]))]
+
+    #найдем скалярное произведение векторов AB · CD = ABx · CDx + ABy · CDy + ABz · CDz
+    Tee_Out_Tee_Duct = Tee_Duct[0]*Tee_Out[0] + Tee_Duct[1]*Tee_Out[1] + Tee_Duct[2]*Tee_Out[2]
+
+    #найдем длины векторов
+    len_Tee_Duct = ((Tee_Duct[0])**2 + (Tee_Duct[1])**2 + (Tee_Duct[2])**2)**0.5
+    len_Tee_Out = ((Tee_Out[0])**2 + (Tee_Out[1])**2 + (Tee_Out[2])**2)**0.5
+
+    #найдем косинус
+    cos = (Tee_Out_Tee_Duct)/(len_Tee_Duct * len_Tee_Out)
+
+    #Если угол расхождения между вектором входа воздуха и выхода больше 10 градусов(цифра с потолка) то считаем что идет буквой L
+    #Если нет, то считаем что идет по прямой буквой I
+    if math.acos(cos) > 0.10:
+        orient = 'L'
+    else:
+        orient = 'I'
     return orient
 
 
