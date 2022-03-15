@@ -64,6 +64,26 @@ if len(paraNames) > 0:
         print name
     sys.exit()
 
+
+connectorNum = 0
+try:
+    for connector in connectorCol:
+        if str(connector.Domain) == "DomainElectrical":
+            connectorNum = connectorNum + 1
+except Exception:
+
+    print "Не найдено электрических коннекторов, должен быть один"
+    sys.exit()
+
+
+if connectorNum > 1:
+    print "Электрических коннекторов больше одного, удалите лишние"
+    sys.exit()
+if connectorNum == 0:
+    print "Не найдено электрических коннекторов, должен быть один"
+    sys.exit()
+
+
 with revit.Transaction("Добавление формул"):
     #если не присвоить значение, то потом в процессе получается деление на ноль
     for param in set:

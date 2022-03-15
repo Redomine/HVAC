@@ -64,8 +64,12 @@ spFileName = str(doc.Application.SharedParametersFilename)
 spFileName = spFileName.split('\\')
 spFileName = spFileName[-1]
 if "ФОП_ADSK.txt" != spFileName:
-    print 'Подгружен не тот файл общих параметров, переключитесь на ФОП_ADSK'
-    sys.exit()
+    try:
+        doc.Application.SharedParametersFilename = "T:\\Проектный институт\\Отдел стандартизации BIM и RD\\BIM-Ресурсы\\2-Стандарты\\01 - ФОП\\ФОП_ADSK.txt"
+    except Exception:
+        print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_ADSK.txt'
+
+
 
 
 
@@ -96,7 +100,8 @@ with revit.Transaction("Добавление параметров"):
                 if str(dG.Name) == group:
                     myDefinitions = dG.Definitions
                     eDef = myDefinitions.get_Item(name)
-                    if name == 'ADSK_Номинальная мощность' or name == 'ADSK_Напряжение' or name == 'ADSK_Не нагреватель_Не шкаф' or name == 'ADSK_Без частотного регулятора':
+                    if name == 'ADSK_Номинальная мощность' or name == 'ADSK_Напряжение' or name == 'ADSK_Не нагреватель_Не шкаф'\
+                            or name == 'ADSK_Без частотного регулятора' or name == 'ADSK_Классификация нагрузок':
                         manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, False)
                     else:
                         manager.AddParameter(eDef, BuiltInParameterGroup.PG_ELECTRICAL_LOADS, True)

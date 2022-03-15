@@ -281,7 +281,12 @@ def getDpTee(element):
     if type == 5:
         dp = (0.56 * V2/V1 + 0.6)*0.6*V1**2
     return dp
-        
+
+def getDpTapAdjustable(element):
+    dp = 10
+
+    return dp
+
 def getLossMethods(serviceId):
     lc=[]
     service = ExternalServiceRegistry.GetService(serviceId)
@@ -317,6 +322,10 @@ with revit.Transaction("Пересчет потерь напора"):
 
         if str(el.MEPModel.PartType) == 'Tee':
             dp = getDpTee(el)
+
+        if str(el.MEPModel.PartType) == 'TapAdjustable':
+            dp = getDpTapAdjustable(el)
+
 
         eleId = el.Id
         fitting = doc.GetElement(eleId)

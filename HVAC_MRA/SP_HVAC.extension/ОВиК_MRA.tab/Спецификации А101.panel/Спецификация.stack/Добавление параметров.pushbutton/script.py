@@ -38,9 +38,12 @@ spFile = doc.Application.OpenSharedParameterFile()
 spFileName = str(doc.Application.SharedParametersFilename)
 spFileName = spFileName.split('\\')
 spFileName = spFileName[-1]
+
 if "ФОП_v1.txt" != spFileName:
-    print 'Подгружен не тот файл общих параметров, переключитесь на ФОП_v1'
-    sys.exit()
+    try:
+        doc.Application.SharedParametersFilename = "T:\\Проектный институт\\Отдел стандартизации BIM и RD\\BIM-Ресурсы\\2-Стандарты\\01 - ФОП\\ФОП_v1.txt"
+    except Exception:
+        print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_v1.txt
 
 paraNames = ['ФОП_ВИС_Группирование', 'ФОП_ВИС_Единица измерения', 'ФОП_ВИС_Масса', 'ФОП_ВИС_Минимальная толщина воздуховода',
              'ФОП_ВИС_Наименование комбинированное', 'ФОП_ВИС_Число']
