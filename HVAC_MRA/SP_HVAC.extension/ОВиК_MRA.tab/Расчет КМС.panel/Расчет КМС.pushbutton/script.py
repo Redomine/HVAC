@@ -99,7 +99,7 @@ def getDpTransition(element):
     
     if v_1 > v_2:
         dp = 0.864*(v_1 - v_2)**1.8
-    if v_2 > v_1:
+    else:
         dp = 0.146*(v_2 - v_1)**1.9
             
     return dp
@@ -283,7 +283,36 @@ def getDpTee(element):
     return dp
 
 def getDpTapAdjustable(element):
-    dp = 10
+    conSet = getConnectors(element)
+
+    mainCon = []
+    for connector in conSet:
+        connectorSet = connector.AllRefs.ForwardIterator()
+        while connectorSet.MoveNext():
+            mainCon.append(connectorSet.Current)
+    Area = []
+    for connector in mainCon:
+        duct = connector.Owner
+        try:
+            A = duct.Width * 0.3048 * duct.Height * 0.3048
+            Area.append((A))
+        except Exception:
+            A = 3.14*((duct.Diameter * 0.3048)/2)**2
+            Area.append(A)
+    if Area[0] > Area[1]: A1 = Area[0]
+    else: A1 = Area[1]
+
+    try:
+        A2 = conSet[0].Height * 0.3048 * conSet[0].Width * 0.3048
+        E = 0.7 - (A2 / A1)*0.7
+
+    except:
+        A2 = 3.14 * 0.3048 * 0.3048 * conSet[0].Radius ** 2
+        E = 0.5 - (A2 / A1)*0.5
+
+    v = conSet[0].Flow * 101.94 / 3600 / A2
+
+    dp = E * 0.6 * v**2
 
     return dp
 
@@ -315,18 +344,30 @@ with revit.Transaction("Пересчет потерь напора"):
     for el in elems:
         dp = 3.3
         if str(el.MEPModel.PartType) == 'Elbow':
-            dp = getDpElbow(el)
+            try:
+                dp = getDpElbow(el)
+            except Exception:
+                dp = 0
 
         if str(el.MEPModel.PartType) == 'Transition':
-            dp = getDpTransition(el)
+            try:
+                dp = getDpTransition(el)
+            except Exception:
+                dp = 0
 
         if str(el.MEPModel.PartType) == 'Tee':
-            dp = getDpTee(el)
+            try:
+                dp = getDpTee(el)
+            except Exception:
+                dp = 0
 
         if str(el.MEPModel.PartType) == 'TapAdjustable':
-            dp = getDpTapAdjustable(el)
+            try:
+                dp = getDpTapAdjustable(el)
+            except Exception:
+                dp = 0
 
-
+        dp = dp
         eleId = el.Id
         fitting = doc.GetElement(eleId)
         param = fitting.get_Parameter(BuiltInParameter.RBS_DUCT_FITTING_LOSS_METHOD_SERVER_PARAM)
@@ -340,8 +381,6 @@ with revit.Transaction("Пересчет потерь напора"):
             fitting.SetEntity(entity)
         except Exception:
             pass
-
-
 
 with revit.Transaction("Выключение систем"):
     colSystems = make_col(BuiltInCategory.OST_DuctSystem)
