@@ -58,51 +58,83 @@ def getConnectors(element):
 
 def getDpElbow(element):
     a = getConnectors(element)
-    try:
-        S1 = a[0].Height*0.3048*a[0].Width*0.3048
-    except:
-        S1 = 3.14*0.3048*0.3048*a[0].Radius**2
-
-    v1 = a[0].Flow*101.94/3600/S1
-    
     angle = a[1].Angle
-        
-    if angle > 1:
-        dp = 0.32*(v1**1.8)
-    elif angle<=1 and angle>0.7:
-        dp = 0.32*(v1**1.8)/2
-    elif angle>0 and angle<=0.7: 
-        dp = 0.32*(v1**1.8)/3
-    return dp
+
+    try:
+        H = a[0].Height* 304.8
+        B = a[0].Width* 304.8
+        E = 2.71828182845904
+
+        K = 0.25 * (B/H) ** 0.25 * (1.07 * E**(2/(2*(100 + B/2)/B +1)) - 1) ** 2
+        if angle <= 1:
+            K = K * 0.708
+
+    except:
+        if angle > 1:
+            K = 0.33
+        else:
+            K = 0.18
+
+    return K
 
 def getDpTransition(element):
     a = getConnectors(element)
     try:
-        S1 = a[0].Height*0.3048*a[0].Width*0.3048
+        S1 = a[0].Height*304.8*a[0].Width*304.8
     except:
-        S1 = 3.14*0.3048*0.3048*a[0].Radius**2
+        S1 = 3.14*304.8*304.8*a[0].Radius**2
     try:
-        S2 = a[1].Height*0.3048*a[1].Width*0.3048
+        S2 = a[1].Height*304.8*a[1].Width*304.8
     except:
-        S2 = 3.14*0.3048*0.3048*a[1].Radius**2
-        
-    v1 = a[0].Flow*101.94/3600/S1
-    v2 = a[1].Flow*101.94/3600/S2
-    
+        S2 = 3.14*304.8*304.8*a[1].Radius**2
+
+
     #проверяем в какую сторону дует воздух чтоб выяснить расширение это или заужение
     if str(a[0].Direction) == "In":
-        v_1 = v1
-        v_2 = v2
+        if S1 > S2:
+            transition = 'Заужение'
+            F0 = S2
+            F1 = S1
+        else:
+            transition = 'Расширение'
+            F0 = S1
+            F1 = S2
     if str(a[0].Direction) == "Out":
-        v_1 = v2
-        v_2 = v1
-    
-    if v_1 > v_2:
-        dp = 0.864*(v_1 - v_2)**1.8
-    else:
-        dp = 0.146*(v_2 - v_1)**1.9
-            
-    return dp
+        if S1 < S2:
+            transition = 'Заужение'
+            F0 = S1
+            F1 = S2
+        else:
+            transition = 'Расширение'
+            F0 = S2
+            F1 = S1
+
+    F = F0/F1
+
+
+
+    if transition == 'Расширение':
+        if F < 0.11: K = 0.81
+        elif F < 0.21: K = 0.64
+        elif F < 0.31: K = 0.5
+        elif F < 0.41: K = 0.36
+        elif F < 0.51: K = 0.26
+        elif F < 0.61: K = 0.16
+        elif F < 0.71: K = 0.09
+        else: K = 0.04
+    if transition == 'Заужение':
+        if F < 0.11: K = 0.45
+        elif F < 0.21: K = 0.4
+        elif F < 0.31: K = 0.35
+        elif F < 0.41: K = 0.3
+        elif F < 0.51: K = 0.25
+        elif F < 0.61: K = 0.2
+        elif F < 0.71: K = 0.15
+        else: K = 0.1
+
+
+
+    return K
 
 def getConCoords(connector):
     a0 = connector.Origin.ToString()
@@ -215,35 +247,37 @@ def getTeeOrient(element):
     #Если угол расхождения между вектором входа воздуха и выхода больше 10 градусов(цифра с потолка) то считаем что идет буквой L
     #Если нет, то считаем что идет по прямой буквой I
 
+
     #тип 1
-    #подающий воздуховод, dp = (0.4408 * (v2/v1)**2 - 0.7619 * v2/v1 + 0.3785) * 0.6 * v1 ** 2
-    if math.acos(cosMain) < 0.10 and str(connectors[0].DuctSystemType) == "SupplyAir":
+    #вытяжной воздуховод zп
+    if math.acos(cosMain) < 0.10 and str(connectors[0].DuctSystemType) == "ExhaustAir":
         type = 1
 
     #тип 2
-    #вытяжной воздуховод, dp = 0.2 * (v2/v1)**-0.76 * 0.6 * v1**2
-    elif math.acos(cosMain) < 0.10 and str(connectors[0].DuctSystemType) == "ExhaustAir":
+    #вытяжной воздуховод, zо
+    elif math.acos(cosMain) > 0.10 and str(connectors[0].DuctSystemType) == "ExhaustAir":
         type = 2
 
     #тип 3
-    #вытяжной воздуховод, dp = (0.7 * (v2/v1)**2 + 0.4 * v2/v1 - 0.4)*0.6*v1**2
-    elif math.acos(cosMain) > 0.10 and str(connectors[0].DuctSystemType) == "ExhaustAir":
+    #подающий воздуховод, zп
+    elif math.acos(cosMain) < 0.10 and str(connectors[0].DuctSystemType) == "SupplyAir":
         type = 3
 
     #тип 4
-    #подающий воздуховод, dp = (0.4 * v2/v1 + 1) * 0.6 * v1 ** 2
+    #подающий воздуховод, zо
     elif math.acos(cosMain) > 0.10 and str(connectors[0].DuctSystemType) == "SupplyAir":
         type = 4
-
-    else:
-        type = 5
 
     return type
 
 
 def getDpTee(element):
     conSet = getConnectors(element)
-    type = getTeeOrient(element)
+    try:
+        type = getTeeOrient(element)
+    except Exception:
+        type = 'Ошибка'
+
     dp = 10
     try:
         S1 = conSet[0].Height*0.3048*conSet[0].Width*0.3048
@@ -258,29 +292,39 @@ def getDpTee(element):
     except:
         S3 = 3.14*0.3048*0.3048*conSet[2].Radius**2
 
-    v1 = conSet[0].Flow*101.94/3600/S1
-    v2 = conSet[1].Flow*101.94/3600/S2
-    v3 = conSet[2].Flow*101.94/3600/S3
+    if type != 'Ошибка':
+        v1 = conSet[0].Flow*101.94/3600/S1
+        v2 = conSet[1].Flow*101.94/3600/S2
+        v3 = conSet[2].Flow*101.94/3600/S3
+        Vset = [v1, v2, v3]
+        Lc = max(Vset)
+        Vset.remove(Lc)
+        if Vset[0] > Vset[1]:
+            Lo = Vset[0]
+        else:
+            Lo = Vset[1]
 
-    Vset = [v1, v2, v3]
-    V1 = max(Vset)
-    Vset.remove(V1)
-    if Vset[0] > Vset[1]:
-        V2 = Vset[0]
-    else:
-        V2 = Vset[1]
+        Fc = max [S1, S2, S3]
+        Fo = min [S1, S2, S3]
+        f0 = Fc/Fo
+        l0 = Lc/Lo
 
     if type == 1:
-        dp = (0.4408 * (V2 / V1) ** 2 - 0.7619 * V2 / V1 + 0.3785) * 0.6 * V1 ** 2
+        if f0 < 0.36: degree = 0.8 * l0
+        else:
+            if l0 < 0.61: degree = 0.5
+            else: 0.8 * l0
+        K = (1 - (1 - l0)**2 - (1.4 - l0)*(l0**2) - 2*degree * l0/f0)/(((1-l0)**2)/f0)
+
     if type == 2:
-        dp = 0.2 * (V2 / V1) ** -0.76 * 0.6 * V1 ** 2
+        K = 1
     if type == 3:
-        dp = (0.7 * (V2 / V1) ** 2 + 0.4 * V2 / V1 - 0.4) * 0.6 * V1 ** 2
+        K = 1
     if type == 4:
-        dp = (0.4 * V2/V1 + 1) * 0.6 * V1 ** 2
+        K = 1
     if type == 5:
-        dp = (0.56 * V2/V1 + 0.6)*0.6*V1**2
-    return dp
+        K = 1
+    return K
 
 def getDpTapAdjustable(element):
     conSet = getConnectors(element)
@@ -338,49 +382,56 @@ def getServerById(serverGUID, serviceId):
             return server
     return None
 
-elems=colFittings
+
+
 
 with revit.Transaction("Пересчет потерь напора"):
-    for el in elems:
-        dp = 3.3
-        if str(el.MEPModel.PartType) == 'Elbow':
-            try:
-                dp = getDpElbow(el)
-            except Exception:
-                dp = 0
+    for element in colFittings:
+        K = 0.5
+        if str(element.MEPModel.PartType) == 'Elbow':
+            K = getDpElbow(element)
 
-        if str(el.MEPModel.PartType) == 'Transition':
-            try:
-                dp = getDpTransition(el)
-            except Exception:
-                dp = 0
 
-        if str(el.MEPModel.PartType) == 'Tee':
-            try:
-                dp = getDpTee(el)
-            except Exception:
-                dp = 0
+        if str(element.MEPModel.PartType) == 'Transition':
+            K = getDpTransition(element)
 
-        if str(el.MEPModel.PartType) == 'TapAdjustable':
-            try:
-                dp = getDpTapAdjustable(el)
-            except Exception:
-                dp = 0
 
-        dp = dp
-        eleId = el.Id
+        if str(element.MEPModel.PartType) == 'Tee':
+            K = getDpTee(element)
+
+        #
+        # if str(el.MEPModel.PartType) == 'TapAdjustable':
+        #     try:
+        #         dp = getDpTapAdjustable(el)
+        #     except Exception:
+        #         dp = 0
+
+        #выбираем метод потерь по гуиду, "определенный коэффициент"
+        # schema = Schema.Lookup(Guid("13ded697-d107-4b0d-8dc4-2a2e4c870096"))
+        # fitting = doc.GetElement(element.Id)
+        # param = fitting.get_Parameter(BuiltInParameter.RBS_DUCT_FITTING_LOSS_METHOD_SERVER_PARAM)
+        # param.Set("Coefficient")
+        # entity = element.GetEntity(schema)
+        # field = schema.GetField("Coefficient")
+        # entity.Set[field.ValueType](field, str(K))
+        # element.SetEntity(entity)
+
+        eleId = element.Id
         fitting = doc.GetElement(eleId)
         param = fitting.get_Parameter(BuiltInParameter.RBS_DUCT_FITTING_LOSS_METHOD_SERVER_PARAM)
         lc = getLossMethods(ExternalServices.BuiltInExternalServices.DuctFittingAndAccessoryPressureDropService)
-        param.Set(lc[9].ToString()) # установка метода потерь
-        schema = lc[11].GetDataSchema()
-        field = schema.GetField("PressureLoss")
+        param.Set(lc[6].ToString()) # установка метода потерь
+        schema = lc[8].GetDataSchema()
+
+        field = schema.GetField("Coefficient")
         entity=fitting.GetEntity(schema)
         try:
-            entity.Set[field.ValueType](field, str(int(math.ceil(dp/3.3))))
+            entity.Set[field.ValueType](field, str(K))
             fitting.SetEntity(entity)
         except Exception:
             pass
+
+
 
 with revit.Transaction("Выключение систем"):
     colSystems = make_col(BuiltInCategory.OST_DuctSystem)

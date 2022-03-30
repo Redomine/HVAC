@@ -69,7 +69,23 @@ if "ФОП_ADSK.txt" != spFileName:
     except Exception:
         print 'По стандартному пути не найден файл общих параметров, обратитесь в бим отдел или замените вручную на ФОП_ADSK.txt'
 
+connectorNum = 0
+try:
+    for connector in connectorCol:
+        if str(connector.Domain) == "DomainElectrical":
+            connectorNum = connectorNum + 1
+except Exception:
 
+    print "Не найдено электрических коннекторов, должен быть один"
+    sys.exit()
+
+
+if connectorNum > 1:
+    print "Электрических коннекторов больше одного, удалите лишние"
+    sys.exit()
+if connectorNum == 0:
+    print "Не найдено электрических коннекторов, должен быть один"
+    sys.exit()
 
 
 

@@ -69,9 +69,12 @@ if is_temporary_in == False:
 
 
 def setElement(element, name, setting):
-    if setting == None:
+    try:
+        if setting == None:
+            pass
+        else: element.LookupParameter(name).Set(setting)
+    except Exception:
         pass
-    else: element.LookupParameter(name).Set(setting)
 
 
 def new_position(calculation_elements):

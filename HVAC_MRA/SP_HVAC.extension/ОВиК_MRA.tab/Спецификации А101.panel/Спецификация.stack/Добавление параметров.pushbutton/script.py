@@ -65,6 +65,7 @@ catPlumbingFixtures = doc.Settings.Categories.get_Item(BuiltInCategory.OST_Plumb
 cats = [catFittings, catPipeFittings, catPipeCurves, catCurves, catFlexCurves, catFlexPipeCurves, catTerminals, catAccessory,
         catPipeAccessory, catEquipment, catInsulations, catPipeInsulations, catPlumbingFixtures]
 
+ductCats = [catCurves, catInsulations]
 
 #проверка на наличие нужных параметров
 map = doc.ParameterBindings
@@ -78,9 +79,13 @@ uiDoc = __revit__.ActiveUIDocument
 sel = uiDoc.Selection
 
 catSet = doc.Application.Create.NewCategorySet()
+catDuctSet = doc.Application.Create.NewCategorySet()
 
 for cat in cats:
     catSet.Insert(cat)
+
+for cat in ductCats:
+    catDuctSet.Insert(cat)
 
 with revit.Transaction("Добавление параметров"):
     if len(paraNames) > 0:
@@ -91,5 +96,8 @@ with revit.Transaction("Добавление параметров"):
                 if str(dG.Name) == group:
                     myDefinitions = dG.Definitions
                     eDef = myDefinitions.get_Item(name)
-                    newIB = doc.Application.Create.NewInstanceBinding(catSet)
+                    if name == "ФОП_ВИС_Минимальная толщина воздуховода":
+                        newIB = doc.Application.Create.NewTypeBinding(catDuctSet)
+                    else:
+                        newIB = doc.Application.Create.NewInstanceBinding(catSet)
                     doc.ParameterBindings.Insert(eDef, newIB)
